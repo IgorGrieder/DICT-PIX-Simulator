@@ -1,4 +1,4 @@
-import type { KeyType } from "../types";
+import type { EntryModel } from "../modules/entries/model";
 
 type ValidationResult<T = void> =
 	| { success: true; value: T }
@@ -144,7 +144,10 @@ function validateEVP(evp: string): ValidationResult {
 	return { success: true, value: undefined };
 }
 
-export function validateKey(key: string, keyType: KeyType): ValidationResult {
+export function validateKey(
+	key: string,
+	keyType: EntryModel.KeyType,
+): ValidationResult {
 	switch (keyType) {
 		case "CPF":
 			return validateCPF(key);

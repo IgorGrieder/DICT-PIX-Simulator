@@ -1,32 +1,31 @@
 import mongoose, { type Document, Schema } from "mongoose";
-import type { Account, Entry, Owner } from "../types";
+import { EntryModel as EntrySchema } from "../modules/entries/model";
 
-export interface EntryDocument
-	extends Omit<Entry, "createdAt" | "updatedAt">,
-		Document {
-	createdAt: Date;
-	updatedAt: Date;
-}
+export type EntryDocument = EntrySchema.createBody &
+	Document & {
+		createdAt: Date;
+		updatedAt: Date;
+	};
 
-const AccountSchema = new Schema<Account>(
+const AccountMongoSchema = new Schema<EntrySchema.account>(
 	{
 		participant: { type: String, required: true }, // ISPB
 		branch: { type: String, required: true },
 		accountNumber: { type: String, required: true },
 		accountType: {
 			type: String,
-			enum: ["CACC", "SVGS", "SLRY"],
+			enum: EntrySchema.accountTypes,
 			required: true,
 		},
 	},
 	{ _id: false },
 );
 
-const OwnerSchema = new Schema<Owner>(
+const OwnerMongoSchema = new Schema<EntrySchema.owner>(
 	{
 		type: {
 			type: String,
-			enum: ["NATURAL_PERSON", "LEGAL_PERSON"],
+			enum: EntrySchema.ownerTypes,
 			required: true,
 		},
 		taxIdNumber: { type: String, required: true },
@@ -35,16 +34,16 @@ const OwnerSchema = new Schema<Owner>(
 	{ _id: false },
 );
 
-const EntrySchema = new Schema<EntryDocument>(
+const EntryMongoSchema = new Schema<EntryDocument>(
 	{
 		key: { type: String, required: true, unique: true, index: true },
 		keyType: {
 			type: String,
-			enum: ["CPF", "CNPJ", "EMAIL", "PHONE", "EVP"],
+			enum: EntrySchema.keyTypes,
 			required: true,
 		},
-		account: { type: AccountSchema, required: true },
-		owner: { type: OwnerSchema, required: true },
+		account: { type: AccountMongoSchema, required: true },
+		owner: { type: OwnerMongoSchema, required: true },
 	},
 	{
 		timestamps: true,
@@ -52,6 +51,9 @@ const EntrySchema = new Schema<EntryDocument>(
 );
 
 // Index for owner lookups
-EntrySchema.index({ "owner.taxIdNumber": 1 });
+EntryMongoSchema.index({ "owner.taxIdNumber": 1 });
 
-export const EntryModel = mongoose.model<EntryDocument>("Entry", EntrySchema);
+export const EntryModel = mongoose.model<EntryDocument>(
+	"Entry",
+	EntryMongoSchema,
+);

@@ -1,7 +1,13 @@
 import mongoose, { type Document, Schema } from "mongoose";
-import type { IdempotencyRecord } from "../types";
 
-export interface IdempotencyDocument extends IdempotencyRecord, Document {}
+export type IdempotencyRecord = {
+	key: string;
+	response: unknown;
+	statusCode: number;
+	createdAt: Date;
+};
+
+export type IdempotencyDocument = IdempotencyRecord & Document;
 
 const IdempotencySchema = new Schema<IdempotencyDocument>(
 	{
