@@ -7,8 +7,14 @@ services:
       - PORT=3000
       - MONGODB_URI=mongodb://mongo:27017/dict
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+      - REDIS_URI=redis://redis:6379
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - RATE_LIMIT_BUCKET_SIZE=60
+      - RATE_LIMIT_REFILL_SECONDS=60
     depends_on:
       mongo:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       jaeger:
         condition: service_started
@@ -27,6 +33,20 @@ services:
       retries: 5
       start_period: 10s
 
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
   jaeger:
     image: jaegertracing/jaeger:2.6.0
     ports:
@@ -37,3 +57,4 @@ services:
 
 volumes:
   mongo_data:
+  redis_data:
