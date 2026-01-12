@@ -18,7 +18,7 @@ export const entriesModule = new Elysia({ prefix: "/entries" })
 		async ({ body, set }) => {
 			return record("handler.createEntry", async () => {
 				// Validate key format (body is already validated by Elysia)
-				const validationResult = await record("validation.key", () =>
+				const validationResult = record("validation.key", () =>
 					validateKey(body.key, body.keyType),
 				);
 

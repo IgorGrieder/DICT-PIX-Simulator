@@ -6,6 +6,7 @@
       "name": "dict",
       "dependencies": {
         "@elysiajs/jwt": "^1.4.0",
+        "@elysiajs/openapi": "^1.4.13",
         "@elysiajs/opentelemetry": "^1.4.10",
         "@opentelemetry/exporter-trace-otlp-proto": "^0.209.0",
         "@opentelemetry/sdk-trace-node": "^2.3.0",
@@ -44,6 +45,8 @@
     "@borewit/text-codec": ["@borewit/text-codec@0.2.1", "", {}, "sha512-k7vvKPbf7J2fZ5klGRD9AeKfUvojuZIQ3BT5u7Jfv+puwXkUBUT5PVyMDfJZpy30CBDXGMgw7fguK/lpOMBvgw=="],
 
     "@elysiajs/jwt": ["@elysiajs/jwt@1.4.0", "", { "dependencies": { "jose": "^6.0.11" }, "peerDependencies": { "elysia": ">= 1.4.0" } }, "sha512-Z0PvZhQxdDeKZ8HslXzDoXXD83NKExNPmoiAPki3nI2Xvh5wtUrBH+zWOD17yP14IbRo8fxGj3L25MRCAPsgPA=="],
+
+    "@elysiajs/openapi": ["@elysiajs/openapi@1.4.13", "", { "peerDependencies": { "elysia": ">= 1.4.0" } }, "sha512-5BNI7yuFo8zjacTWA8a/wYE0tNZ4ecD7PAkeUDEU7lj6Iep0t2i5Rml6q4/+roM5oZFdtvvzoX4DH8zGKFEo0w=="],
 
     "@elysiajs/opentelemetry": ["@elysiajs/opentelemetry@1.4.10", "", { "dependencies": { "@opentelemetry/api": "^1.9.0", "@opentelemetry/instrumentation": "^0.200.0", "@opentelemetry/sdk-node": "^0.200.0" }, "peerDependencies": { "elysia": ">= 1.4.0" } }, "sha512-2GH187Rr3n3Rq+R7fogn/jcmdwWk9OMtbYhnaJg5ydiLOJvtrztDp0p+zbyGFG2gspx8U9vpaCvSJ69Aq1zZkA=="],
 

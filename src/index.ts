@@ -1,3 +1,4 @@
+import { fromTypes, openapi } from "@elysiajs/openapi";
 import { opentelemetry } from "@elysiajs/opentelemetry";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-node";
@@ -22,6 +23,11 @@ const app = new Elysia()
 					}),
 				),
 			],
+		}),
+	)
+	.use(
+		openapi({
+			references: fromTypes(),
 		}),
 	)
 	.get("/health", () => ({ status: "ok", timestamp: new Date().toISOString() }))
