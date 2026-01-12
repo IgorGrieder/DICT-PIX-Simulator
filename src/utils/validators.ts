@@ -1,9 +1,36 @@
 import type { KeyType } from "../types";
 
+type ValidationResult<T = void> =
+	| { success: true; value: T }
+	| { success: false; error: ValidationError };
+
+type ValidationError =
+	| { type: Keys.INVALID_CPF; message: string }
+	| { type: Keys.INVALID_CNPJ; message: string }
+	| { type: Keys.INVALID_EMAIL; message: string }
+	| { type: Keys.INVALID_PHONE; message: string }
+	| { type: Keys.INVALID_EVP; message: string };
+
+export enum Keys {
+	INVALID_CPF,
+	INVALID_CNPJ,
+	INVALID_EMAIL,
+	INVALID_PHONE,
+	INVALID_EVP,
+}
+
 // CPF validation with Módulo 11
-function isValidCPF(cpf: string): boolean {
-	if (!/^\d{11}$/.test(cpf)) return false;
-	if (/^(\d)\1{10}$/.test(cpf)) return false; // All same digits
+function validateCPF(cpf: string): ValidationResult {
+	if (!/^\d{11}$/.test(cpf))
+		return {
+			success: false,
+			error: { type: Keys.INVALID_CPF, message: "Invalid CPF format" },
+		};
+	if (/^(\d)\1{10}$/.test(cpf))
+		return {
+			success: false,
+			error: { type: Keys.INVALID_CPF, message: "Invalid CPF format" },
+		}; // All same digits
 
 	const digits = cpf.split("").map(Number);
 
@@ -14,7 +41,11 @@ function isValidCPF(cpf: string): boolean {
 	}
 	let remainder = (sum * 10) % 11;
 	if (remainder === 10) remainder = 0;
-	if (remainder !== digits[9]!) return false;
+	if (remainder !== digits[9]!)
+		return {
+			success: false,
+			error: { type: Keys.INVALID_CPF, message: "Invalid CPF format" },
+		};
 
 	// Second check digit
 	sum = 0;
@@ -23,15 +54,27 @@ function isValidCPF(cpf: string): boolean {
 	}
 	remainder = (sum * 10) % 11;
 	if (remainder === 10) remainder = 0;
-	if (remainder !== digits[10]!) return false;
+	if (remainder !== digits[10]!)
+		return {
+			success: false,
+			error: { type: Keys.INVALID_CPF, message: "Invalid CPF format" },
+		};
 
-	return true;
+	return { success: true, value: undefined };
 }
 
 // CNPJ validation with Módulo 11
-function isValidCNPJ(cnpj: string): boolean {
-	if (!/^\d{14}$/.test(cnpj)) return false;
-	if (/^(\d)\1{13}$/.test(cnpj)) return false; // All same digits
+function validateCNPJ(cnpj: string): ValidationResult {
+	if (!/^\d{14}$/.test(cnpj))
+		return {
+			success: false,
+			error: { type: Keys.INVALID_CNPJ, message: "Invalid CNPJ format" },
+		};
+	if (/^(\d)\1{13}$/.test(cnpj))
+		return {
+			success: false,
+			error: { type: Keys.INVALID_CNPJ, message: "Invalid CNPJ format" },
+		}; // All same digits
 
 	const digits = cnpj.split("").map(Number);
 	const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
@@ -44,7 +87,11 @@ function isValidCNPJ(cnpj: string): boolean {
 	}
 	let remainder = sum % 11;
 	const firstCheck = remainder < 2 ? 0 : 11 - remainder;
-	if (firstCheck !== digits[12]!) return false;
+	if (firstCheck !== digits[12]!)
+		return {
+			success: false,
+			error: { type: Keys.INVALID_CNPJ, message: "Invalid CNPJ format" },
+		};
 
 	// Second check digit
 	sum = 0;
@@ -53,44 +100,61 @@ function isValidCNPJ(cnpj: string): boolean {
 	}
 	remainder = sum % 11;
 	const secondCheck = remainder < 2 ? 0 : 11 - remainder;
-	if (secondCheck !== digits[13]!) return false;
+	if (secondCheck !== digits[13]!)
+		return {
+			success: false,
+			error: { type: Keys.INVALID_CNPJ, message: "Invalid CNPJ format" },
+		};
 
-	return true;
+	return { success: true, value: undefined };
 }
 
 // Email validation (RFC 5322 simplified)
-function isValidEmail(email: string): boolean {
+function validateEmail(email: string): ValidationResult {
 	const emailRegex =
 		/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-	return emailRegex.test(email) && email.length <= 77;
+	if (!emailRegex.test(email) || email.length > 77)
+		return {
+			success: false,
+			error: { type: Keys.INVALID_EMAIL, message: "Invalid email format" },
+		};
+	return { success: true, value: undefined };
 }
 
 // Phone validation (+55 prefix, 10-11 digits)
-function isValidPhone(phone: string): boolean {
+function validatePhone(phone: string): ValidationResult {
 	const phoneRegex = /^\+55\d{10,11}$/;
-	return phoneRegex.test(phone);
+	if (!phoneRegex.test(phone))
+		return {
+			success: false,
+			error: { type: Keys.INVALID_PHONE, message: "Invalid phone format" },
+		};
+	return { success: true, value: undefined };
 }
 
 // EVP validation (UUID v4)
-function isValidEVP(evp: string): boolean {
+function validateEVP(evp: string): ValidationResult {
 	const uuidRegex =
 		/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-	return uuidRegex.test(evp);
+	if (!uuidRegex.test(evp))
+		return {
+			success: false,
+			error: { type: Keys.INVALID_EVP, message: "Invalid EVP format" },
+		};
+	return { success: true, value: undefined };
 }
 
-export function validateKey(key: string, keyType: KeyType): boolean {
+export function validateKey(key: string, keyType: KeyType): ValidationResult {
 	switch (keyType) {
 		case "CPF":
-			return isValidCPF(key);
+			return validateCPF(key);
 		case "CNPJ":
-			return isValidCNPJ(key);
+			return validateCNPJ(key);
 		case "EMAIL":
-			return isValidEmail(key);
+			return validateEmail(key);
 		case "PHONE":
-			return isValidPhone(key);
+			return validatePhone(key);
 		case "EVP":
-			return isValidEVP(key);
-		default:
-			return false;
+			return validateEVP(key);
 	}
 }

@@ -25,15 +25,15 @@ export async function createEntry(ctx: {
 		const { body, set } = ctx;
 
 		// Validate key format (body is already validated by Elysia)
-		const isValidKey = await record("validation.key", () =>
+		const validationResult = await record("validation.key", () =>
 			validateKey(body.key, body.keyType as KeyType),
 		);
 
-		if (!isValidKey) {
+		if (validationResult.success === false) {
 			set.status = 400;
 			return {
-				error: "INVALID_KEY_FORMAT",
-				message: `Invalid ${body.keyType} format`,
+				error: validationResult.error.type,
+				message: validationResult.error.message,
 			};
 		}
 
