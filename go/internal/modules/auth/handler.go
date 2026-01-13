@@ -34,11 +34,15 @@ type AuthResponse struct {
 }
 
 // Handler handles auth-related HTTP requests
-type Handler struct{}
+type Handler struct {
+	repo *models.UserRepository
+}
 
 // NewHandler creates a new auth handler
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(repo *models.UserRepository) *Handler {
+	return &Handler{
+		repo: repo,
+	}
 }
 
 // Register handles user registration
@@ -58,7 +62,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Check if user already exists
-	existingUser, err := models.FindUserByEmail(ctx, req.Email)
+	existingUser, err := h.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to check existing user")
 		return
@@ -70,7 +74,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create user
-	user, err := models.CreateUser(ctx, req.Email, req.Password, req.Name)
+	user, err := h.repo.Create(ctx, req.Email, req.Password, req.Name)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create user")
 		return
@@ -106,7 +110,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Find user
-	user, err := models.FindUserByEmail(ctx, req.Email)
+	user, err := h.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find user")
 		return
@@ -133,6 +137,20 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteJSON(w, http.StatusOK, AuthResponse{
 		Token: token,
 		User:  user.ToResponse(),
+	})
+}
+
+// Me handles getting current user
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	userID := r.Header.Get("X-User-Id")
+	if userID == "" {
+		httputil.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", "User ID not found")
+		return
+	}
+
+	// For now, we just return the ID as we don't have FindByID yet
+	httputil.WriteJSON(w, http.StatusOK, map[string]string{
+		"id": userID,
 	})
 }
 

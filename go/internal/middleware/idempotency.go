@@ -5,12 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/dict-simulator/go/internal/models"
 )
 
 const IdempotencyKeyHeader = "X-Idempotency-Key"
@@ -40,8 +34,8 @@ func (rr *responseRecorder) Write(b []byte) (int, error) {
 	return rr.ResponseWriter.Write(b)
 }
 
-// IdempotencyMiddleware handles idempotent requests
-func IdempotencyMiddleware(next http.Handler) http.Handler {
+// Idempotency handles idempotent requests
+func (m *Manager) Idempotency(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		idempotencyKey := r.Header.Get(IdempotencyKeyHeader)
 
@@ -55,7 +49,7 @@ func IdempotencyMiddleware(next http.Handler) http.Handler {
 
 		// Try to atomically insert a "processing" record to claim this key
 		// This prevents race conditions between concurrent requests
-		claimed, record, err := claimIdempotencyKey(ctx, idempotencyKey)
+		claimed, record, err := m.idempotencyRepo.ClaimKey(ctx, idempotencyKey)
 		if err != nil {
 			// On error, proceed with the request
 			next.ServeHTTP(w, r)
@@ -77,55 +71,7 @@ func IdempotencyMiddleware(next http.Handler) http.Handler {
 		// Store the response (fire and forget, but synchronous to avoid data races)
 		var response any
 		if err := json.Unmarshal(recorder.body.Bytes(), &response); err == nil {
-			models.SaveIdempotencyRecord(context.Background(), idempotencyKey, response, recorder.statusCode)
+			m.idempotencyRepo.Save(context.Background(), idempotencyKey, response, recorder.statusCode)
 		}
 	})
-}
-
-// claimIdempotencyKey attempts to atomically claim an idempotency key.
-// Returns (true, nil, nil) if claimed, (false, record, nil) if already exists.
-func claimIdempotencyKey(ctx context.Context, key string) (bool, *models.IdempotencyRecord, error) {
-	// First, check if a completed record exists
-	record, err := models.FindIdempotencyRecord(ctx, key)
-	if err != nil {
-		return false, nil, err
-	}
-
-	if record != nil {
-		return false, record, nil
-	}
-
-	// Try to insert a new record atomically using upsert with a condition
-	// This ensures only one request can claim the key
-	collection := models.IdempotencyCollection()
-	filter := bson.M{"key": key}
-	update := bson.M{
-		"$setOnInsert": bson.M{
-			"key":        key,
-			"statusCode": 0, // Processing marker
-			"createdAt":  nil,
-		},
-	}
-	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.Before)
-
-	var existing models.IdempotencyRecord
-	err = collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&existing)
-
-	if err == mongo.ErrNoDocuments {
-		// We successfully inserted (claimed) the key
-		return true, nil, nil
-	}
-
-	if err != nil {
-		return false, nil, err
-	}
-
-	// Key already existed, return the existing record if it's complete
-	if existing.StatusCode != 0 {
-		return false, &existing, nil
-	}
-
-	// Another request is processing, we could wait or proceed
-	// For simplicity, we'll proceed (the save will just overwrite)
-	return true, nil, nil
 }

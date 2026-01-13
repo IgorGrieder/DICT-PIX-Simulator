@@ -10,11 +10,15 @@ import (
 )
 
 // Handler handles entry-related HTTP requests
-type Handler struct{}
+type Handler struct {
+	repo *models.EntryRepository
+}
 
 // NewHandler creates a new entries handler
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(repo *models.EntryRepository) *Handler {
+	return &Handler{
+		repo: repo,
+	}
 }
 
 // Create handles creating a new entry
@@ -41,7 +45,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Check if key already exists
-	existing, err := models.FindEntryByKey(ctx, req.Key)
+	existing, err := h.repo.FindByKey(ctx, req.Key)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to check existing entry")
 		return
@@ -53,7 +57,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create entry
-	entry, err := models.CreateEntry(ctx, &req)
+	entry, err := h.repo.Create(ctx, &req)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create entry")
 		return
@@ -72,7 +76,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	entry, err := models.FindEntryByKey(ctx, key)
+	entry, err := h.repo.FindByKey(ctx, key)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find entry")
 		return
@@ -96,7 +100,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	entry, err := models.DeleteEntryByKey(ctx, key)
+	entry, err := h.repo.DeleteByKey(ctx, key)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete entry")
 		return
@@ -111,4 +115,70 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		Message: "Entry deleted successfully",
 		Key:     entry.Key,
 	})
+}
+
+// Update handles updating an entry by key
+// Per DICT spec:
+// - EVP keys cannot be updated
+// - Only account info, name, and trade name can be updated
+// - Valid reasons: USER_REQUESTED, BRANCH_TRANSFER, RECONCILIATION, RFB_VALIDATION
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	key := r.PathValue("key")
+	if key == "" {
+		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Key is required")
+		return
+	}
+
+	var req models.UpdateEntryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		return
+	}
+
+	// Ensure key in path matches key in body
+	if req.Key != "" && req.Key != key {
+		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Key in path must match key in body")
+		return
+	}
+	req.Key = key
+
+	// Validate request using validator library
+	if err := validation.Validate(&req); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		return
+	}
+
+	ctx := r.Context()
+
+	// Check if entry exists
+	existing, err := h.repo.FindByKey(ctx, key)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find entry")
+		return
+	}
+
+	if existing == nil {
+		httputil.WriteError(w, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
+		return
+	}
+
+	// EVP keys cannot be updated per DICT spec
+	if existing.KeyType == models.KeyTypeEVP {
+		httputil.WriteError(w, http.StatusBadRequest, "INVALID_OPERATION", "EVP keys cannot be updated")
+		return
+	}
+
+	// Update the entry
+	entry, err := h.repo.UpdateByKey(ctx, key, &req)
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update entry")
+		return
+	}
+
+	if entry == nil {
+		httputil.WriteError(w, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
+		return
+	}
+
+	httputil.WriteJSON(w, http.StatusOK, entry.ToResponse())
 }

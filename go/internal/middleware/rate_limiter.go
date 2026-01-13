@@ -1,117 +1,118 @@
 package middleware
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
-	"time"
-
-	"github.com/redis/go-redis/v9"
 
 	"github.com/dict-simulator/go/internal/config"
-	"github.com/dict-simulator/go/internal/db"
+	"github.com/dict-simulator/go/internal/ratelimit"
 )
 
-// RateLimitResult contains rate limit information
-type RateLimitResult struct {
-	Allowed   bool
-	Limit     int
-	Remaining int
-	Reset     int64
+// responseCapture wraps http.ResponseWriter to capture the status code
+type responseCapture struct {
+	http.ResponseWriter
+	statusCode int
+	written    bool
 }
 
-// RateLimiterMiddleware implements token bucket rate limiting using Redis
-func RateLimiterMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip rate limiting if disabled (for benchmarks)
-		if !config.Env.RateLimitEnabled {
-			next.ServeHTTP(w, r)
-			return
-		}
+func (r *responseCapture) WriteHeader(code int) {
+	if !r.written {
+		r.statusCode = code
+		r.written = true
+	}
+	r.ResponseWriter.WriteHeader(code)
+}
 
-		userID := r.Header.Get("X-User-Id")
-		if userID == "" {
-			userID = "anonymous"
-		}
+func (r *responseCapture) Write(b []byte) (int, error) {
+	if !r.written {
+		r.statusCode = http.StatusOK
+		r.written = true
+	}
+	return r.ResponseWriter.Write(b)
+}
 
-		result, err := checkRateLimit(r.Context(), userID)
-		if err != nil {
-			// If Redis fails, allow the request but log the error
-			next.ServeHTTP(w, r)
-			return
-		}
+// RateLimiterWithPolicy creates a rate limiting middleware for a specific policy
+// This middleware:
+// 1. Checks if the request is allowed before processing
+// 2. Captures the response status code
+// 3. Deducts tokens based on the response (error-based counting)
+func (m *Manager) RateLimiterWithPolicy(policy ratelimit.Policy) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Skip rate limiting if disabled
+			if !config.Env.RateLimitEnabled {
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		// Set rate limit headers
-		w.Header().Set("X-RateLimit-Limit", strconv.Itoa(result.Limit))
-		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(result.Remaining))
-		w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(result.Reset, 10))
+			if m.rateLimiter == nil {
+				// Fail open if bucket not initialized
+				next.ServeHTTP(w, r)
+				return
+			}
 
-		if !result.Allowed {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusTooManyRequests)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":   "TOO_MANY_REQUESTS",
-				"message": "Rate limit exceeded. Please try again later.",
-			})
-			return
-		}
+			// Get identifier (participant ID from header, fallback to user ID)
+			identifier := r.Header.Get("X-Participant-Id")
+			if identifier == "" {
+				identifier = r.Header.Get("X-User-Id")
+			}
+			if identifier == "" {
+				identifier = "anonymous"
+			}
 
-		next.ServeHTTP(w, r)
+			ctx := r.Context()
+
+			// Pre-check: verify there's capacity in the bucket
+			state, err := m.rateLimiter.Check(ctx, policy, identifier)
+			if err != nil {
+				// Fail open on Redis errors
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Set rate limit headers
+			setRateLimitHeaders(w, policy, state)
+
+			// If no tokens available, return 429
+			if !state.Allowed {
+				writeRateLimitError(w)
+				return
+			}
+
+			// Wrap response writer to capture status code
+			capture := &responseCapture{
+				ResponseWriter: w,
+				statusCode:     http.StatusOK,
+			}
+
+			// Process the request
+			next.ServeHTTP(capture, r)
+
+			// Post-response: deduct tokens based on actual status code
+			// This implements the DICT spec error-based counting:
+			// - 2xx: subtract SuccessCost (usually 1)
+			// - 404: subtract NotFoundCost (can be 3 for antiscan)
+			// - 5xx: skip deduction if IgnoreOn5xx is true
+			_ = m.rateLimiter.Consume(ctx, policy, identifier, capture.statusCode)
+		})
+	}
+}
+
+// setRateLimitHeaders adds standard rate limit headers to the response
+func setRateLimitHeaders(w http.ResponseWriter, policy ratelimit.Policy, state *ratelimit.BucketState) {
+	w.Header().Set("X-RateLimit-Limit", strconv.Itoa(policy.BucketSize))
+	w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(state.Remaining))
+	w.Header().Set("X-RateLimit-Reset", strconv.FormatInt(state.Reset, 10))
+	w.Header().Set("X-RateLimit-Policy", string(policy.Name))
+}
+
+// writeRateLimitError writes a 429 Too Many Requests response
+func writeRateLimitError(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusTooManyRequests)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error":   "TOO_MANY_REQUESTS",
+		"message": "Rate limit exceeded. Please try again later.",
 	})
-}
-
-func checkRateLimit(ctx context.Context, userID string) (*RateLimitResult, error) {
-	bucketSize := config.Env.RateLimitBucketSize
-	refillSeconds := config.Env.RateLimitRefillSeconds
-
-	key := fmt.Sprintf("rate_limit:%s", userID)
-
-	currentTokens, err := db.RedisClient.Get(ctx, key).Result()
-	if err != nil && !errors.Is(err, redis.Nil) {
-		return nil, err
-	}
-
-	resetTime := time.Now().Unix() + int64(refillSeconds)
-
-	// Key doesn't exist, create new bucket
-	if currentTokens == "" {
-		remaining := bucketSize - 1
-		err = db.RedisClient.Set(ctx, key, strconv.Itoa(remaining), time.Duration(refillSeconds)*time.Second).Err()
-		if err != nil {
-			return nil, err
-		}
-		return &RateLimitResult{
-			Allowed:   true,
-			Limit:     bucketSize,
-			Remaining: remaining,
-			Reset:     resetTime,
-		}, nil
-	}
-
-	tokens, _ := strconv.Atoi(currentTokens)
-
-	if tokens <= 0 {
-		return &RateLimitResult{
-			Allowed:   false,
-			Limit:     bucketSize,
-			Remaining: 0,
-			Reset:     resetTime,
-		}, nil
-	}
-
-	remaining := tokens - 1
-	err = db.RedisClient.Set(ctx, key, strconv.Itoa(remaining), time.Duration(refillSeconds)*time.Second).Err()
-	if err != nil {
-		return nil, err
-	}
-
-	return &RateLimitResult{
-		Allowed:   true,
-		Limit:     bucketSize,
-		Remaining: remaining,
-		Reset:     resetTime,
-	}, nil
 }

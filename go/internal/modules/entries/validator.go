@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/dict-simulator/go/internal/models"
+	"github.com/dict-simulator/go/internal/validation"
 )
 
 // ValidationError represents a key validation error
@@ -58,39 +59,7 @@ func validateCPF(cpf string) ValidationResult {
 		return invalidResult
 	}
 
-	// All same digits is invalid
-	if matched, _ := regexp.MatchString(`^(\d)\1{10}$`, cpf); matched {
-		return invalidResult
-	}
-
-	digits := make([]int, 11)
-	for i, c := range cpf {
-		digits[i] = int(c - '0')
-	}
-
-	// First check digit
-	sum := 0
-	for i := 0; i < 9; i++ {
-		sum += digits[i] * (10 - i)
-	}
-	remainder := (sum * 10) % 11
-	if remainder == 10 {
-		remainder = 0
-	}
-	if remainder != digits[9] {
-		return invalidResult
-	}
-
-	// Second check digit
-	sum = 0
-	for i := 0; i < 10; i++ {
-		sum += digits[i] * (11 - i)
-	}
-	remainder = (sum * 10) % 11
-	if remainder == 10 {
-		remainder = 0
-	}
-	if remainder != digits[10] {
+	if !validation.IsValidCPF(cpf) {
 		return invalidResult
 	}
 
@@ -112,51 +81,16 @@ func validateCNPJ(cnpj string) ValidationResult {
 		return invalidResult
 	}
 
-	// All same digits is invalid
-	if matched, _ := regexp.MatchString(`^(\d)\1{13}$`, cnpj); matched {
-		return invalidResult
-	}
-
-	digits := make([]int, 14)
-	for i, c := range cnpj {
-		digits[i] = int(c - '0')
-	}
-
-	weights1 := []int{5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
-	weights2 := []int{6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2}
-
-	// First check digit
-	sum := 0
-	for i := 0; i < 12; i++ {
-		sum += digits[i] * weights1[i]
-	}
-	remainder := sum % 11
-	firstCheck := 0
-	if remainder >= 2 {
-		firstCheck = 11 - remainder
-	}
-	if firstCheck != digits[12] {
-		return invalidResult
-	}
-
-	// Second check digit
-	sum = 0
-	for i := 0; i < 13; i++ {
-		sum += digits[i] * weights2[i]
-	}
-	remainder = sum % 11
-	secondCheck := 0
-	if remainder >= 2 {
-		secondCheck = 11 - remainder
-	}
-	if secondCheck != digits[13] {
+	if !validation.IsValidCNPJ(cnpj) {
 		return invalidResult
 	}
 
 	return ValidationResult{Success: true}
 }
 
-// validateEmail validates an email address (RFC 5322 simplified)
+// validateEmail validates an email address per DICT spec
+// DICT spec: ^[a-z0-9.!#$&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$
+// Note: Email must be lowercase and max 77 characters
 func validateEmail(email string) ValidationResult {
 	invalidResult := ValidationResult{
 		Success: false,
@@ -171,7 +105,19 @@ func validateEmail(email string) ValidationResult {
 		return invalidResult
 	}
 
-	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9.!#$%&'*+/=?^_` + "`" + `{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$`)
+	// DICT spec requires lowercase emails
+	if email != strings.ToLower(email) {
+		return ValidationResult{
+			Success: false,
+			Error: &ValidationError{
+				Type:    "INVALID_EMAIL",
+				Message: "Email must be lowercase",
+			},
+		}
+	}
+
+	// DICT spec regex - only lowercase allowed
+	emailRegex := regexp.MustCompile(`^[a-z0-9.!#$%&'*+/=?^_` + "`" + `{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$`)
 	if !emailRegex.MatchString(email) {
 		return invalidResult
 	}
@@ -179,7 +125,9 @@ func validateEmail(email string) ValidationResult {
 	return ValidationResult{Success: true}
 }
 
-// validatePhone validates a phone number (+55 prefix, 10-11 digits)
+// validatePhone validates a phone number per DICT spec
+// DICT spec: ^\+[1-9]\d{1,14}$
+// Supports international E.164 format (not just Brazil)
 func validatePhone(phone string) ValidationResult {
 	invalidResult := ValidationResult{
 		Success: false,
@@ -189,7 +137,9 @@ func validatePhone(phone string) ValidationResult {
 		},
 	}
 
-	phoneRegex := regexp.MustCompile(`^\+55\d{10,11}$`)
+	// DICT spec: E.164 international format
+	// Must start with + followed by country code (1-9) and up to 14 more digits
+	phoneRegex := regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
 	if !phoneRegex.MatchString(phone) {
 		return invalidResult
 	}
