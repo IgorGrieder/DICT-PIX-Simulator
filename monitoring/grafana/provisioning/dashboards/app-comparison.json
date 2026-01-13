@@ -38,7 +38,7 @@
 						"type": "prometheus",
 						"uid": "PBFA97CFB590B2093"
 					},
-					"expr": "rate(http_requests_total{job=\"dict-bun\"}[1m])",
+					"expr": "sum by (method, path) (rate(http_requests_total{job=\"dict-bun\"}[1m]))",
 					"legendFormat": "Bun - {{method}} {{path}}",
 					"refId": "A"
 				},
@@ -47,7 +47,7 @@
 						"type": "prometheus",
 						"uid": "PBFA97CFB590B2093"
 					},
-					"expr": "rate(http_requests_total{job=\"dict-go\"}[1m])",
+					"expr": "sum by (method, path) (rate(http_requests_total{job=\"dict-go\"}[1m]))",
 					"legendFormat": "Go - {{method}} {{path}}",
 					"refId": "B"
 				}
@@ -85,7 +85,7 @@
 						"type": "prometheus",
 						"uid": "PBFA97CFB590B2093"
 					},
-					"expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"dict-bun\"}[1m]))",
+					"expr": "histogram_quantile(0.95, sum by (le, method, path) (rate(http_request_duration_seconds_bucket{job=\"dict-bun\"}[1m])))",
 					"legendFormat": "Bun - {{method}} {{path}} (p95)",
 					"refId": "A"
 				},
@@ -94,7 +94,7 @@
 						"type": "prometheus",
 						"uid": "PBFA97CFB590B2093"
 					},
-					"expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"dict-go\"}[1m]))",
+					"expr": "histogram_quantile(0.95, sum by (le, method, path) (rate(http_request_duration_seconds_bucket{job=\"dict-go\"}[1m])))",
 					"legendFormat": "Go - {{method}} {{path}} (p95)",
 					"refId": "B"
 				}

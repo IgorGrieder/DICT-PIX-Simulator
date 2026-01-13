@@ -107,6 +107,14 @@ if [ "$RUN_BUN" = false ] && [ "$RUN_GO" = false ]; then
     RUN_GO=true
 fi
 
+# Function to kill process on port
+kill_port() {
+    local port=$1
+    echo -e "${YELLOW}Ensuring port $port is free...${NC}"
+    lsof -ti :$port | xargs kill -9 2>/dev/null || true
+    sleep 2
+}
+
 # Step 1: Start monitoring stack
 echo -e "\n${YELLOW}Step 1: Starting monitoring stack...${NC}"
 docker compose -f "$PROJECT_DIR/monitoring/docker-compose.yml" up -d
@@ -117,6 +125,7 @@ sleep 5
 # Step 2: Run Bun benchmark
 if [ "$RUN_BUN" = true ]; then
     echo -e "\n${YELLOW}Step 2: Starting Bun/Elysia app...${NC}"
+    kill_port 3000
     
     # Start infrastructure
     docker compose -f "$PROJECT_DIR/bun/docker-compose.yml" up -d mongo redis jaeger
@@ -137,6 +146,7 @@ if [ "$RUN_BUN" = true ]; then
     # Stop Bun app
     echo -e "${YELLOW}Stopping Bun/Elysia app...${NC}"
     kill $BUN_PID 2>/dev/null || true
+    kill_port 3000
     docker compose -f "$PROJECT_DIR/bun/docker-compose.yml" down
     
     echo -e "\n${YELLOW}Cooldown period (10s)...${NC}"
@@ -146,6 +156,7 @@ fi
 # Step 3: Run Go benchmark
 if [ "$RUN_GO" = true ]; then
     echo -e "\n${YELLOW}Step 3: Starting Go app...${NC}"
+    kill_port 3000
     
     # Start infrastructure
     docker compose -f "$PROJECT_DIR/go/docker-compose.yml" up -d mongo redis jaeger
@@ -166,6 +177,7 @@ if [ "$RUN_GO" = true ]; then
     # Stop Go app
     echo -e "${YELLOW}Stopping Go app...${NC}"
     kill $GO_PID 2>/dev/null || true
+    kill_port 3000
     docker compose -f "$PROJECT_DIR/go/docker-compose.yml" down
 fi
 
