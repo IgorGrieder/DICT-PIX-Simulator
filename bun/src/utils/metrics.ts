@@ -30,27 +30,20 @@ export const httpRequestDuration = new Histogram({
 
 // Metrics middleware plugin
 export const metricsMiddleware = new Elysia({ name: "metrics" })
-	.derive(() => {
-		return { metricsStart: performance.now() };
+	.onRequest(({ request, store }) => {
+		store.metricsStart = performance.now();
 	})
-	.onAfterHandle(({ request, set, metricsStart }) => {
-		const duration = (performance.now() - metricsStart) / 1000;
+	.onResponse(({ request, set, store }) => {
+		// Use store.metricsStart if available, otherwise fallback
+		const start = (store as any).metricsStart || performance.now();
+		const duration = (performance.now() - start) / 1000;
 		const path = new URL(request.url).pathname;
+
+		// Skip metrics endpoint itself to avoid noise
+		if (path === "/metrics") return;
+
 		const method = request.method;
 		const status = String(set.status || 200);
-
-		httpRequestsTotal.inc({ method, path: normalizePath(path), status });
-		httpRequestDuration.observe(
-			{ method, path: normalizePath(path), status },
-			duration,
-		);
-	})
-	.onError(({ request, set, metricsStart }) => {
-		const duration =
-			(performance.now() - (metricsStart ?? performance.now())) / 1000;
-		const path = new URL(request.url).pathname;
-		const method = request.method;
-		const status = String(set.status || 500);
 
 		httpRequestsTotal.inc({ method, path: normalizePath(path), status });
 		httpRequestDuration.observe(
