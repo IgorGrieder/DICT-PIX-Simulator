@@ -29,25 +29,31 @@ type UserResponse struct {
 	Name  string `json:"name"`
 }
 
-func UsersCollection() *mongo.Collection {
-	return db.Collection("users")
+// UserRepository handles database operations for users
+type UserRepository struct {
+	collection *mongo.Collection
 }
 
-// EnsureUserIndexes creates necessary indexes for the users collection
-func EnsureUserIndexes(ctx context.Context) error {
-	collection := UsersCollection()
+// NewUserRepository creates a new user repository
+func NewUserRepository(db *db.Mongo) *UserRepository {
+	return &UserRepository{
+		collection: db.Collection("users"),
+	}
+}
 
+// EnsureIndexes creates necessary indexes for the users collection
+func (r *UserRepository) EnsureIndexes(ctx context.Context) error {
 	indexModel := mongo.IndexModel{
 		Keys:    bson.D{{Key: "email", Value: 1}},
 		Options: options.Index().SetUnique(true),
 	}
 
-	_, err := collection.Indexes().CreateOne(ctx, indexModel)
+	_, err := r.collection.Indexes().CreateOne(ctx, indexModel)
 	return err
 }
 
-// CreateUser creates a new user with hashed password
-func CreateUser(ctx context.Context, email, password, name string) (*User, error) {
+// Create creates a new user with hashed password
+func (r *UserRepository) Create(ctx context.Context, email, password, name string) (*User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -62,7 +68,7 @@ func CreateUser(ctx context.Context, email, password, name string) (*User, error
 		UpdatedAt: now,
 	}
 
-	result, err := UsersCollection().InsertOne(ctx, user)
+	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +82,10 @@ func CreateUser(ctx context.Context, email, password, name string) (*User, error
 	return user, nil
 }
 
-// FindUserByEmail finds a user by email
-func FindUserByEmail(ctx context.Context, email string) (*User, error) {
+// FindByEmail finds a user by email
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*User, error) {
 	var user User
-	err := UsersCollection().FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	err := r.collection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil

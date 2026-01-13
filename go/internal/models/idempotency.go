@@ -19,14 +19,20 @@ type IdempotencyRecord struct {
 	CreatedAt  time.Time `bson:"createdAt"`
 }
 
-func IdempotencyCollection() *mongo.Collection {
-	return db.Collection("idempotency")
+// IdempotencyRepository handles database operations for idempotency records
+type IdempotencyRepository struct {
+	collection *mongo.Collection
 }
 
-// EnsureIdempotencyIndexes creates necessary indexes for the idempotency collection
-func EnsureIdempotencyIndexes(ctx context.Context) error {
-	collection := IdempotencyCollection()
+// NewIdempotencyRepository creates a new idempotency repository
+func NewIdempotencyRepository(db *db.Mongo) *IdempotencyRepository {
+	return &IdempotencyRepository{
+		collection: db.Collection("idempotency"),
+	}
+}
 
+// EnsureIndexes creates necessary indexes for the idempotency collection
+func (r *IdempotencyRepository) EnsureIndexes(ctx context.Context) error {
 	indexes := []mongo.IndexModel{
 		{
 			Keys:    bson.D{{Key: "key", Value: 1}},
@@ -38,14 +44,14 @@ func EnsureIdempotencyIndexes(ctx context.Context) error {
 		},
 	}
 
-	_, err := collection.Indexes().CreateMany(ctx, indexes)
+	_, err := r.collection.Indexes().CreateMany(ctx, indexes)
 	return err
 }
 
-// FindIdempotencyRecord finds an existing idempotency record
-func FindIdempotencyRecord(ctx context.Context, key string) (*IdempotencyRecord, error) {
+// FindByKey finds an existing idempotency record
+func (r *IdempotencyRepository) FindByKey(ctx context.Context, key string) (*IdempotencyRecord, error) {
 	var record IdempotencyRecord
-	err := IdempotencyCollection().FindOne(ctx, bson.M{"key": key}).Decode(&record)
+	err := r.collection.FindOne(ctx, bson.M{"key": key}).Decode(&record)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
@@ -55,8 +61,47 @@ func FindIdempotencyRecord(ctx context.Context, key string) (*IdempotencyRecord,
 	return &record, nil
 }
 
-// SaveIdempotencyRecord saves or updates an idempotency record
-func SaveIdempotencyRecord(ctx context.Context, key string, response any, statusCode int) error {
+// ClaimKey attempts to atomically claim an idempotency key
+// Returns (true, nil, nil) if claimed (newly inserted)
+// Returns (false, record, nil) if already exists
+func (r *IdempotencyRepository) ClaimKey(ctx context.Context, key string) (bool, *IdempotencyRecord, error) {
+	// First, check if a completed record exists
+	record, err := r.FindByKey(ctx, key)
+	if err == nil && record != nil {
+		return false, record, nil
+	}
+	if err != nil && err != mongo.ErrNoDocuments { // Unexpected error
+		return false, nil, err
+	}
+
+	filter := bson.M{"key": key}
+	update := bson.M{
+		"$setOnInsert": bson.M{
+			"key":        key,
+			"statusCode": 0, // Processing marker
+			"createdAt":  nil,
+		},
+	}
+	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.Before)
+
+	var existing IdempotencyRecord
+	err = r.collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&existing)
+
+	if err == mongo.ErrNoDocuments {
+		// We successfully inserted (claimed) the key because "Before" document was null
+		return true, nil, nil
+	}
+
+	if err != nil {
+		return false, nil, err
+	}
+
+	// Key already existed
+	return false, &existing, nil
+}
+
+// Save saves or updates an idempotency record
+func (r *IdempotencyRepository) Save(ctx context.Context, key string, response any, statusCode int) error {
 	record := IdempotencyRecord{
 		Key:        key,
 		Response:   response,
@@ -65,7 +110,7 @@ func SaveIdempotencyRecord(ctx context.Context, key string, response any, status
 	}
 
 	opts := options.Update().SetUpsert(true)
-	_, err := IdempotencyCollection().UpdateOne(
+	_, err := r.collection.UpdateOne(
 		ctx,
 		bson.M{"key": key},
 		bson.M{"$set": record},

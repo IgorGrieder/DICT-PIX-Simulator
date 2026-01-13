@@ -41,6 +41,33 @@ const (
 	OwnerTypeLegalPerson   OwnerType = "LEGAL_PERSON"
 )
 
+// Reason represents the reason for an entry operation
+type Reason string
+
+const (
+	ReasonUserRequested  Reason = "USER_REQUESTED"
+	ReasonAccountClosure Reason = "ACCOUNT_CLOSURE"
+	ReasonBranchTransfer Reason = "BRANCH_TRANSFER"
+	ReasonReconciliation Reason = "RECONCILIATION"
+	ReasonFraud          Reason = "FRAUD"
+	ReasonRFBValidation  Reason = "RFB_VALIDATION"
+)
+
+// ValidCreateReasons returns the valid reasons for createEntry
+func ValidCreateReasons() []Reason {
+	return []Reason{ReasonUserRequested, ReasonReconciliation}
+}
+
+// ValidUpdateReasons returns the valid reasons for updateEntry
+func ValidUpdateReasons() []Reason {
+	return []Reason{ReasonUserRequested, ReasonBranchTransfer, ReasonReconciliation, ReasonRFBValidation}
+}
+
+// ValidDeleteReasons returns the valid reasons for deleteEntry
+func ValidDeleteReasons() []Reason {
+	return []Reason{ReasonUserRequested, ReasonAccountClosure, ReasonReconciliation, ReasonFraud, ReasonRFBValidation}
+}
+
 // Account represents bank account information
 type Account struct {
 	Participant   string      `bson:"participant" json:"participant" validate:"required,len=8,numeric"`
@@ -54,6 +81,7 @@ type Owner struct {
 	Type        OwnerType `bson:"type" json:"type" validate:"required,oneof=NATURAL_PERSON LEGAL_PERSON"`
 	TaxIdNumber string    `bson:"taxIdNumber" json:"taxIdNumber" validate:"required"`
 	Name        string    `bson:"name" json:"name" validate:"required"`
+	TradeName   string    `bson:"tradeName,omitempty" json:"tradeName,omitempty"` // Only for LEGAL_PERSON
 }
 
 // Entry represents a DICT entry (Pix key registration)
@@ -79,10 +107,29 @@ type EntryResponse struct {
 
 // CreateEntryRequest represents the request body for creating an entry
 type CreateEntryRequest struct {
-	Key     string  `json:"key" validate:"required"`
-	KeyType KeyType `json:"keyType" validate:"required,oneof=CPF CNPJ EMAIL PHONE EVP"`
-	Account Account `json:"account" validate:"required,dive"`
-	Owner   Owner   `json:"owner" validate:"required,dive"`
+	Key       string  `json:"key" validate:"required"`
+	KeyType   KeyType `json:"keyType" validate:"required,oneof=CPF CNPJ EMAIL PHONE EVP"`
+	Account   Account `json:"account" validate:"required,dive"`
+	Owner     Owner   `json:"owner" validate:"required,dive"`
+	Reason    Reason  `json:"reason" validate:"required,oneof=USER_REQUESTED RECONCILIATION"`
+	RequestId string  `json:"requestId" validate:"required,uuid4"`
+}
+
+// UpdateEntryRequest represents the request body for updating an entry
+// Per DICT spec: Only account info, name, and trade name can be updated
+// EVP keys cannot be updated
+type UpdateEntryRequest struct {
+	Key     string   `json:"key" validate:"required"`
+	Account *Account `json:"account,omitempty" validate:"omitempty,dive"`
+	Owner   *Owner   `json:"owner,omitempty" validate:"omitempty,dive"`
+	Reason  Reason   `json:"reason" validate:"required,oneof=USER_REQUESTED BRANCH_TRANSFER RECONCILIATION RFB_VALIDATION"`
+}
+
+// DeleteEntryRequest represents the request body for deleting an entry
+type DeleteEntryRequest struct {
+	Key         string `json:"key" validate:"required"`
+	Participant string `json:"participant" validate:"required,len=8,numeric"`
+	Reason      Reason `json:"reason" validate:"required,oneof=USER_REQUESTED ACCOUNT_CLOSURE RECONCILIATION FRAUD RFB_VALIDATION"`
 }
 
 // DeleteEntryResponse represents the response for deleting an entry
@@ -91,14 +138,20 @@ type DeleteEntryResponse struct {
 	Key     string `json:"key"`
 }
 
-func EntriesCollection() *mongo.Collection {
-	return db.Collection("entries")
+// EntryRepository handles database operations for entries
+type EntryRepository struct {
+	collection *mongo.Collection
 }
 
-// EnsureEntryIndexes creates necessary indexes for the entries collection
-func EnsureEntryIndexes(ctx context.Context) error {
-	collection := EntriesCollection()
+// NewEntryRepository creates a new entry repository
+func NewEntryRepository(db *db.Mongo) *EntryRepository {
+	return &EntryRepository{
+		collection: db.Collection("entries"),
+	}
+}
 
+// EnsureIndexes creates necessary indexes for the entries collection
+func (r *EntryRepository) EnsureIndexes(ctx context.Context) error {
 	indexes := []mongo.IndexModel{
 		{
 			Keys:    bson.D{{Key: "key", Value: 1}},
@@ -109,12 +162,12 @@ func EnsureEntryIndexes(ctx context.Context) error {
 		},
 	}
 
-	_, err := collection.Indexes().CreateMany(ctx, indexes)
+	_, err := r.collection.Indexes().CreateMany(ctx, indexes)
 	return err
 }
 
-// CreateEntry creates a new entry in the database
-func CreateEntry(ctx context.Context, req *CreateEntryRequest) (*Entry, error) {
+// Create creates a new entry in the database
+func (r *EntryRepository) Create(ctx context.Context, req *CreateEntryRequest) (*Entry, error) {
 	now := time.Now()
 	entry := &Entry{
 		Key:       req.Key,
@@ -125,7 +178,7 @@ func CreateEntry(ctx context.Context, req *CreateEntryRequest) (*Entry, error) {
 		UpdatedAt: now,
 	}
 
-	result, err := EntriesCollection().InsertOne(ctx, entry)
+	result, err := r.collection.InsertOne(ctx, entry)
 	if err != nil {
 		return nil, err
 	}
@@ -139,10 +192,10 @@ func CreateEntry(ctx context.Context, req *CreateEntryRequest) (*Entry, error) {
 	return entry, nil
 }
 
-// FindEntryByKey finds an entry by its key
-func FindEntryByKey(ctx context.Context, key string) (*Entry, error) {
+// FindByKey finds an entry by its key
+func (r *EntryRepository) FindByKey(ctx context.Context, key string) (*Entry, error) {
 	var entry Entry
-	err := EntriesCollection().FindOne(ctx, bson.M{"key": key}).Decode(&entry)
+	err := r.collection.FindOne(ctx, bson.M{"key": key}).Decode(&entry)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
@@ -152,10 +205,47 @@ func FindEntryByKey(ctx context.Context, key string) (*Entry, error) {
 	return &entry, nil
 }
 
-// DeleteEntryByKey deletes an entry by its key and returns the deleted entry
-func DeleteEntryByKey(ctx context.Context, key string) (*Entry, error) {
+// DeleteByKey deletes an entry by its key and returns the deleted entry
+func (r *EntryRepository) DeleteByKey(ctx context.Context, key string) (*Entry, error) {
 	var entry Entry
-	err := EntriesCollection().FindOneAndDelete(ctx, bson.M{"key": key}).Decode(&entry)
+	err := r.collection.FindOneAndDelete(ctx, bson.M{"key": key}).Decode(&entry)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &entry, nil
+}
+
+// UpdateByKey updates an entry by its key
+// Only updates the fields that are provided in the request
+func (r *EntryRepository) UpdateByKey(ctx context.Context, key string, req *UpdateEntryRequest) (*Entry, error) {
+	update := bson.M{
+		"$set": bson.M{
+			"updatedAt": time.Now(),
+		},
+	}
+
+	setFields := update["$set"].(bson.M)
+
+	if req.Account != nil {
+		setFields["account"] = req.Account
+	}
+
+	if req.Owner != nil {
+		// Only update name and trade name, not taxIdNumber per DICT spec
+		if req.Owner.Name != "" {
+			setFields["owner.name"] = req.Owner.Name
+		}
+		if req.Owner.TradeName != "" {
+			setFields["owner.tradeName"] = req.Owner.TradeName
+		}
+	}
+
+	var entry Entry
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+	err := r.collection.FindOneAndUpdate(ctx, bson.M{"key": key}, update, opts).Decode(&entry)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil
