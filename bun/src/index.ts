@@ -7,11 +7,15 @@ import { env } from "./config/env";
 import { connectDB } from "./db";
 import { authModule } from "./modules/auth";
 import { entriesModule } from "./modules/entries";
+import { metricsEndpoint, metricsMiddleware } from "./utils/metrics";
 
 // Connect to MongoDB
 await connectDB();
 
 const app = new Elysia()
+	// Prometheus metrics
+	.use(metricsMiddleware)
+	.use(metricsEndpoint)
 	// OpenTelemetry integration
 	.use(
 		opentelemetry({

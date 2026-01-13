@@ -19,6 +19,10 @@ const envSchema = z.object({
 		.default("http://localhost:4318/v1/traces"),
 
 	// Rate Limiting
+	RATE_LIMIT_ENABLED: z
+		.string()
+		.default("true")
+		.transform((val) => val !== "false" && val !== "0"),
 	RATE_LIMIT_BUCKET_SIZE: z.coerce.number().default(60),
 	RATE_LIMIT_REFILL_SECONDS: z.coerce.number().default(60),
 });
