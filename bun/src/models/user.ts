@@ -1,6 +1,13 @@
-import mongoose from "mongoose";
+import mongoose, { type Document, Schema } from "mongoose";
+import { AuthModel } from "../modules/auth/model";
 
-const userSchema = new mongoose.Schema(
+export type UserDocument = AuthModel.registerBody &
+	Document & {
+		createdAt: Date;
+		updatedAt: Date;
+	};
+
+const userSchema = new Schema<UserDocument>(
 	{
 		email: {
 			type: String,
@@ -23,4 +30,4 @@ const userSchema = new mongoose.Schema(
 	},
 );
 
-export const UserModel = mongoose.model("User", userSchema);
+export const UserModel = mongoose.model<UserDocument>("User", userSchema);

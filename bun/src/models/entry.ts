@@ -36,7 +36,7 @@ const OwnerMongoSchema = new Schema<EntrySchema.owner>(
 
 const EntryMongoSchema = new Schema<EntryDocument>(
 	{
-		key: { type: String, required: true, unique: true, index: true },
+		key: { type: String, required: true, unique: true },
 		keyType: {
 			type: String,
 			enum: EntrySchema.keyTypes,
