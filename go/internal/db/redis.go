@@ -2,36 +2,39 @@ package db
 
 import (
 	"context"
-	"log"
 	"time"
 
+	"github.com/dict-simulator/go/internal/logger"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
-var RedisClient *redis.Client
+type Redis struct {
+	Client *redis.Client
+}
 
-func ConnectRedis(uri string) error {
+func ConnectRedis(uri string) (*Redis, error) {
 	opts, err := redis.ParseURL(uri)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	RedisClient = redis.NewClient(opts)
+	client := redis.NewClient(opts)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := RedisClient.Ping(ctx).Err(); err != nil {
-		return err
+	if err := client.Ping(ctx).Err(); err != nil {
+		return nil, err
 	}
 
-	log.Printf("Redis connected: %s", uri)
-	return nil
+	logger.Info("Redis connected", zap.String("uri", uri))
+	return &Redis{Client: client}, nil
 }
 
-func DisconnectRedis() error {
-	if RedisClient == nil {
+func (r *Redis) Disconnect() error {
+	if r.Client == nil {
 		return nil
 	}
-	return RedisClient.Close()
+	return r.Client.Close()
 }

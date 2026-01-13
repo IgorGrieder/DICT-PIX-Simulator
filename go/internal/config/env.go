@@ -1,7 +1,7 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -28,7 +28,8 @@ func Load() {
 
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
-		log.Fatal("JWT_SECRET environment variable is required")
+		fmt.Fprintln(os.Stderr, "FATAL: JWT_SECRET environment variable is required")
+		os.Exit(1)
 	}
 
 	Env = &Config{

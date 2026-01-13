@@ -2,50 +2,53 @@ package db
 
 import (
 	"context"
-	"log"
 	"time"
 
+	"github.com/dict-simulator/go/internal/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 )
 
-var (
+type Mongo struct {
 	Client   *mongo.Client
 	Database *mongo.Database
-)
+}
 
-func ConnectMongo(uri string) error {
+func ConnectMongo(uri string) (*Mongo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	clientOptions := options.Client().ApplyURI(uri)
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Ping to verify connection
 	if err := client.Ping(ctx, nil); err != nil {
-		return err
+		return nil, err
 	}
 
-	Client = client
-	Database = client.Database("dict")
+	m := &Mongo{
+		Client:   client,
+		Database: client.Database("dict"),
+	}
 
-	log.Printf("MongoDB connected: %s", uri)
-	return nil
+	logger.Info("MongoDB connected", zap.String("uri", uri))
+	return m, nil
 }
 
-func DisconnectMongo() error {
-	if Client == nil {
+func (m *Mongo) Disconnect() error {
+	if m.Client == nil {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return Client.Disconnect(ctx)
+	return m.Client.Disconnect(ctx)
 }
 
-// Collections returns the specified collection
-func Collection(name string) *mongo.Collection {
-	return Database.Collection(name)
+// Collection returns the specified collection
+func (m *Mongo) Collection(name string) *mongo.Collection {
+	return m.Database.Collection(name)
 }
