@@ -27,46 +27,11 @@ const (
 // AccountType represents the type of bank account
 type AccountType string
 
-const (
-	AccountTypeCACC AccountType = "CACC" // Current Account
-	AccountTypeSVGS AccountType = "SVGS" // Savings Account
-	AccountTypeSLRY AccountType = "SLRY" // Salary Account
-)
-
 // OwnerType represents the type of account owner
 type OwnerType string
 
-const (
-	OwnerTypeNaturalPerson OwnerType = "NATURAL_PERSON"
-	OwnerTypeLegalPerson   OwnerType = "LEGAL_PERSON"
-)
-
 // Reason represents the reason for an entry operation
 type Reason string
-
-const (
-	ReasonUserRequested  Reason = "USER_REQUESTED"
-	ReasonAccountClosure Reason = "ACCOUNT_CLOSURE"
-	ReasonBranchTransfer Reason = "BRANCH_TRANSFER"
-	ReasonReconciliation Reason = "RECONCILIATION"
-	ReasonFraud          Reason = "FRAUD"
-	ReasonRFBValidation  Reason = "RFB_VALIDATION"
-)
-
-// ValidCreateReasons returns the valid reasons for createEntry
-func ValidCreateReasons() []Reason {
-	return []Reason{ReasonUserRequested, ReasonReconciliation}
-}
-
-// ValidUpdateReasons returns the valid reasons for updateEntry
-func ValidUpdateReasons() []Reason {
-	return []Reason{ReasonUserRequested, ReasonBranchTransfer, ReasonReconciliation, ReasonRFBValidation}
-}
-
-// ValidDeleteReasons returns the valid reasons for deleteEntry
-func ValidDeleteReasons() []Reason {
-	return []Reason{ReasonUserRequested, ReasonAccountClosure, ReasonReconciliation, ReasonFraud, ReasonRFBValidation}
-}
 
 // Account represents bank account information
 type Account struct {
@@ -92,7 +57,7 @@ type Entry struct {
 	Account   Account            `bson:"account" json:"account"`
 	Owner     Owner              `bson:"owner" json:"owner"`
 	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt,omitempty"`
+	UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
 
 // EntryResponse represents the API response for an entry
@@ -102,7 +67,7 @@ type EntryResponse struct {
 	Account   Account   `json:"account"`
 	Owner     Owner     `json:"owner"`
 	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt,omitempty"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // CreateEntryRequest represents the request body for creating an entry
@@ -123,13 +88,6 @@ type UpdateEntryRequest struct {
 	Account *Account `json:"account,omitempty" validate:"omitempty,dive"`
 	Owner   *Owner   `json:"owner,omitempty" validate:"omitempty,dive"`
 	Reason  Reason   `json:"reason" validate:"required,oneof=USER_REQUESTED BRANCH_TRANSFER RECONCILIATION RFB_VALIDATION"`
-}
-
-// DeleteEntryRequest represents the request body for deleting an entry
-type DeleteEntryRequest struct {
-	Key         string `json:"key" validate:"required"`
-	Participant string `json:"participant" validate:"required,len=8,numeric"`
-	Reason      Reason `json:"reason" validate:"required,oneof=USER_REQUESTED ACCOUNT_CLOSURE RECONCILIATION FRAUD RFB_VALIDATION"`
 }
 
 // DeleteEntryResponse represents the response for deleting an entry
