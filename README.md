@@ -1,57 +1,86 @@
 # Pix DICT Simulator
 
-A high-performance Bun implementation of the **Directory of Transactional Identifiers (DICT)**, simulating the core engine behind the Brazilian Pix ecosystem.
+A high-performance, production-grade implementation of the **Directory of Transactional Identifiers (DICT)** — the core address resolution engine for the Brazilian **Pix** payment ecosystem.
 
-## 🚀 Features
+Built with **Go**, this project demonstrates robust distributed systems patterns including distributed tracing, idempotency, rate limiting, and hexagonal architecture.
 
-- **Fast Key Lookups:** MongoDB Single Field Indexing for sub-second responses
-- **Idempotency:** `x-idempotency-key` header support for safe retries
-- **Validation:** Módulo 11 for CPF/CNPJ, regex for Email/Phone, UUID v4 for EVP
-- **Observability:** OpenTelemetry integration with Elysia plugin
-- **Type Safety:** Zod schemas with Elysia's Standard Schema support
+## 🚀 Key Features
+
+- **High Performance:** Optimized for sub-second responses using **MongoDB** with single-field indexing.
+- **Resilience & Safety:**
+  - **Idempotency:** Native support for `X-Idempotency-Key` headers to ensure safe retries.
+  - **Rate Limiting:** Token bucket algorithm (via **Redis**) with sophisticated policies (e.g., stricter limits for 404s to prevent enumeration attacks).
+  - **Validation:** Strict adherence to BCB standards (Modulo 11 for CPF/CNPJ, regex for Email/Phone).
+- **Observability:**
+  - **Distributed Tracing:** Full OpenTelemetry integration exporting to **Jaeger**.
+  - **Metrics:** Prometheus metrics exposed for scraping.
+  - **Dashboards:** Pre-configured **Grafana** dashboards.
+- **Security:** JWT-based authentication with bcrypt password hashing.
 
 ## 🛠 Tech Stack
 
-- **Runtime:** [Bun](https://bun.sh) + [Elysia](https://elysiajs.com)
-- **Database:** MongoDB via Mongoose
-- **Validation:** Zod (via Elysia Standard Schema)
-- **Observability:** OpenTelemetry with Jaeger
-- **Linting:** Biome
+- **Core:** Go 1.23+
+- **Database:** MongoDB 7.0 (Mongoose/Driver)
+- **Cache & Limits:** Redis 7.2 (Alpine)
+- **Observability:** OpenTelemetry, Jaeger, Prometheus, Grafana
+- **Testing:** k6 (Load & Stress Testing)
+- **Infrastructure:** Docker Compose
 
-## 🏃 Quick Start
+## ⚡️ Quick Start
 
-### With Docker (Recommended)
+The easiest way to run the full stack is using Docker Compose.
 
-```bash
-docker-compose up --build
-```
+### Prerequisites
+- Docker & Docker Compose
+- (Optional) Go 1.23+ for local development
+- (Optional) k6 for running load tests
 
-Services available:
-- **API:** http://localhost:3000
-- **Jaeger UI:** http://localhost:16686
-
-### Local Development
+### Running the Stack
 
 ```bash
-# Install dependencies
-bun install
+# Start all services (API, Mongo, Redis, Jaeger, Prometheus, Grafana)
+docker-compose up -d --build
 
-# Start MongoDB and Jaeger (required)
-docker run -d -p 27017:27017 mongo:7.0
-docker run -d -p 16686:16686 -p 4318:4318 -e COLLECTOR_OTLP_ENABLED=true jaegertracing/jaeger:2.6.0
-
-# Run development server
-bun run dev
+# View logs
+docker-compose logs -f app
 ```
 
-## 📡 API Endpoints
+### Accessing Services
 
-### Create Entry
+| Service | URL | Description |
+|---------|-----|-------------|
+| **API** | `http://localhost:3000` | Main DICT HTTP Service |
+| **Grafana** | `http://localhost:3001` | Dashboards (User/Pass: `admin`/`admin`) |
+| **Jaeger** | `http://localhost:16686` | Distributed Tracing UI |
+| **Prometheus** | `http://localhost:9090` | Metrics Browser |
 
+## 📡 API Reference
+
+### Authentication
+
+**Register**
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "dev@example.com", "password": "secure123", "name": "Developer"}'
+```
+
+**Login**
+```bash
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "dev@example.com", "password": "secure123"}'
+```
+*Returns a JWT token required for all entry operations.*
+
+### Entries
+
+**Create Entry**
 ```bash
 curl -X POST http://localhost:3000/entries \
+  -H "Authorization: Bearer <YOUR_JWT>" \
+  -H "X-Idempotency-Key: <UNIQUE_UUID>" \
   -H "Content-Type: application/json" \
-  -H "x-idempotency-key: unique-request-id" \
   -d '{
     "key": "12345678909",
     "keyType": "CPF",
@@ -65,91 +94,73 @@ curl -X POST http://localhost:3000/entries \
       "type": "NATURAL_PERSON",
       "taxIdNumber": "12345678909",
       "name": "John Doe"
-    }
+    },
+    "reason": "USER_REQUESTED",
+    "requestId": "550e8400-e29b-41d4-a716-446655440000"
   }'
 ```
 
-### Get Entry
+**Get Entry**
+```bash
+curl http://localhost:3000/entries/12345678909 \
+  -H "Authorization: Bearer <YOUR_JWT>"
+```
+
+**Delete Entry**
+```bash
+curl -X DELETE http://localhost:3000/entries/12345678909 \
+  -H "Authorization: Bearer <YOUR_JWT>"
+```
+
+### Key Types
+
+| Type | Format | Notes |
+|------|--------|-------|
+| `CPF` | 11 digits | Validated via Modulo 11 |
+| `CNPJ` | 14 digits | Validated via Modulo 11 |
+| `EMAIL` | RFC 5322 | Max 77 chars |
+| `PHONE` | +55XXXXXXXXXXX | E.164 format (Brazil only) |
+| `EVP` | UUID v4 | Random key |
+
+## 🛡 Rate Limiting Policies
+
+The system implements specific policies compatible with DICT standards:
+
+- **Writes (Create/Delete):** 1200 req/min (Bucket: 36,000)
+- **Updates:** 600 req/min (Bucket: 600)
+- **Reads (Anti-Scan):** 2 req/min (Bucket: 50).
+  - *Note:* A `404 Not Found` costs **3 tokens**, penalizing key enumeration attempts.
+
+## 🧪 Performance Testing
+
+Load tests are located in the `k6/` directory.
 
 ```bash
-curl http://localhost:3000/entries/12345678909
+# Run a standard CRUD flow test
+k6 run k6/entries.test.js
+
+# Run a stress test (100 concurrent users)
+k6 run k6/stress.test.js
+
+# Verify idempotency behavior
+k6 run k6/idempotency.test.js
 ```
 
-### Delete Entry
-
-```bash
-curl -X DELETE http://localhost:3000/entries/12345678909
-```
-
-### Health Check
-
-```bash
-curl http://localhost:3000/health
-```
-
-## 🔑 Key Types
-
-| Type | Format | Validation |
-|------|--------|------------|
-| CPF | 11 digits | Módulo 11 |
-| CNPJ | 14 digits | Módulo 11 |
-| EMAIL | RFC 5322 | Regex (max 77 chars) |
-| PHONE | +55XXXXXXXXXXX | +55 prefix + 10-11 digits |
-| EVP | UUID v4 | UUID format |
-
-## 📁 Project Structure
+## 📂 Project Structure
 
 ```
-src/
-├── index.ts           # App entry point with OpenTelemetry
-├── db.ts              # MongoDB connection
-├── handlers/
-│   └── entries.ts     # Request handlers with tracing
-├── models/
-│   ├── entry.ts       # Entry schema
-│   └── idempotency.ts # Idempotency tracking
-├── routes/
-│   └── entries.ts     # API routes with Zod validation
-├── utils/
-│   ├── validators.ts  # Key validation (CPF/CNPJ/etc.)
-│   └── idempotency.ts # Idempotency middleware
-└── types/
-    └── index.ts       # TypeScript types
+.
+├── go/                     # Backend Source Code
+│   ├── cmd/server/         # Application entry point
+│   ├── internal/           # Private application code
+│   │   ├── config/         # Environment configuration
+│   │   ├── db/             # Mongo & Redis adapters
+│   │   ├── middleware/     # Auth, Rate Limit, Idempotency
+│   │   ├── models/         # Data structures (Entry, Account, Owner)
+│   │   └── modules/        # Domain logic (Handlers, Services)
+│   └── monitoring/         # Prometheus & Grafana configs
+└── k6/                     # Load testing scripts
 ```
-
-## 🔭 Observability
-
-The app uses Elysia's native OpenTelemetry plugin. Traces are exported to Jaeger via OTLP.
-
-### Viewing Traces
-
-1. Start the stack with `docker-compose up`
-2. Make some API requests
-3. Open Jaeger UI at http://localhost:16686
-4. Select "dict-simulator" service
-
-Each request creates spans for:
-- Route handlers (`handler.createEntry`, etc.)
-- Validations (`validation.key`)
-- Database operations (`db.create`, `db.findOne`, etc.)
-
-## 🧪 Scripts
-
-```bash
-bun run dev      # Development with hot reload
-bun run start    # Production start
-bun run format   # Format code with Biome
-bun run lint     # Lint code with Biome
-bun run check    # Full Biome check
-```
-
-## 📝 Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| PORT | 3000 | Server port |
-| MONGODB_URI | mongodb://localhost:27017/dict | MongoDB connection string |
-| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4318/v1/traces | OpenTelemetry endpoint |
 
 ## License
 

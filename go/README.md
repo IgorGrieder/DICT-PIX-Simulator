@@ -14,23 +14,27 @@ A high-performance Go implementation of the **Directory of Transactional Identif
 
 ## Tech Stack
 
-- **Runtime:** Go 1.23+
+- **Runtime:** Go 1.25+
 - **HTTP Server:** `net/http` (standard library)
 - **Database:** MongoDB via `go.mongodb.org/mongo-driver`
 - **Cache:** Redis via `github.com/redis/go-redis/v9`
 - **Auth:** JWT via `github.com/golang-jwt/jwt/v5`
 - **Password Hashing:** bcrypt via `golang.org/x/crypto/bcrypt`
-- **Observability:** OpenTelemetry with Jaeger
+- **Observability:**
+  - Tracing: `otelhttp`, `otelmongo`, `redisotel` (OpenTelemetry Contrib)
+  - Logging: `otelzap` bridge with `zap`
+  - Metrics: Prometheus client
 
 ## Quick Start
 
-### With Docker (Recommended)
+### With Docker
 
 ```bash
 docker-compose up --build
 ```
 
 Services available:
+
 - **API:** http://localhost:3000
 - **Jaeger UI:** http://localhost:16686
 
@@ -54,6 +58,7 @@ go run ./cmd/server
 ### Authentication
 
 #### Register
+
 ```bash
 curl -X POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
@@ -65,6 +70,7 @@ curl -X POST http://localhost:3000/auth/register \
 ```
 
 #### Login
+
 ```bash
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
@@ -77,6 +83,7 @@ curl -X POST http://localhost:3000/auth/login \
 ### Entries (Requires Authentication)
 
 #### Create Entry
+
 ```bash
 curl -X POST http://localhost:3000/entries \
   -H "Content-Type: application/json" \
@@ -100,31 +107,34 @@ curl -X POST http://localhost:3000/entries \
 ```
 
 #### Get Entry
+
 ```bash
 curl http://localhost:3000/entries/12345678909 \
   -H "Authorization: <your-jwt-token>"
 ```
 
 #### Delete Entry
+
 ```bash
 curl -X DELETE http://localhost:3000/entries/12345678909 \
   -H "Authorization: <your-jwt-token>"
 ```
 
 ### Health Check
+
 ```bash
 curl http://localhost:3000/health
 ```
 
 ## Key Types
 
-| Type | Format | Validation |
-|------|--------|------------|
-| CPF | 11 digits | Módulo 11 |
-| CNPJ | 14 digits | Módulo 11 |
-| EMAIL | RFC 5322 | Regex (max 77 chars) |
+| Type  | Format         | Validation                |
+| ----- | -------------- | ------------------------- |
+| CPF   | 11 digits      | Módulo 11                 |
+| CNPJ  | 14 digits      | Módulo 11                 |
+| EMAIL | RFC 5322       | Regex (max 77 chars)      |
 | PHONE | +55XXXXXXXXXXX | +55 prefix + 10-11 digits |
-| EVP | UUID v4 | UUID format |
+| EVP   | UUID v4        | UUID format               |
 
 ## Project Structure
 
@@ -161,33 +171,117 @@ go/
 └── README.md
 ```
 
-## Observability
+## Data Modeling
 
-The app uses OpenTelemetry for distributed tracing. Traces are exported to Jaeger via OTLP.
+The application uses MongoDB to store directory entries, users, and idempotency records.
 
-### Viewing Traces
+```mermaid
+classDiagram
+    class Entry {
+        +ObjectId ID
+        +String Key
+        +KeyType KeyType
+        +Account Account
+        +Owner Owner
+        +Time CreatedAt
+        +Time UpdatedAt
+    }
+    class Account {
+        +String Participant
+        +String Branch
+        +String AccountNumber
+        +AccountType AccountType
+    }
+    class Owner {
+        +OwnerType Type
+        +String TaxIdNumber
+        +String Name
+        +String TradeName
+    }
+    class User {
+        +ObjectId ID
+        +String Email
+        +String Password
+        +String Name
+        +Time CreatedAt
+    }
+    class IdempotencyRecord {
+        +String Key
+        +Any Response
+        +Int StatusCode
+        +Time CreatedAt
+    }
 
-1. Start the stack with `docker-compose up`
-2. Make some API requests
-3. Open Jaeger UI at http://localhost:16686
-4. Select "dict-simulator" service
+    Entry *-- Account
+    Entry *-- Owner
+```
 
-Each request creates spans for:
-- HTTP handlers (`auth.register`, `entries.create`, etc.)
-- Middleware operations
-- Database operations
+## Application Flow
+
+### Create Entry Flow
+
+This diagram illustrates the processing of a key creation request (`POST /entries`), highlighting the middleware chain and business logic.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Auth as Auth Middleware
+    participant RateLimit as Rate Limit Middleware
+    participant Idem as Idempotency Middleware
+    participant Handler as Entry Handler
+    participant DB as MongoDB
+    participant Redis as Redis
+
+    Client->>Auth: POST /entries (Bearer Token)
+
+    alt Invalid Token
+        Auth-->>Client: 401 Unauthorized
+    else Valid Token
+        Auth->>RateLimit: Check Rate Limit
+
+        alt Limit Exceeded
+            RateLimit-->>Client: 429 Too Many Requests
+        else Allowed
+            RateLimit->>Redis: Increment Token Bucket
+            RateLimit->>Idem: Check Idempotency-Key
+
+            alt Key Exists (Completed)
+                Idem->>DB: Find Record
+                DB-->>Idem: Cached Response
+                Idem-->>Client: Return Cached Response
+            else Key Locked (Processing)
+                Idem-->>Client: 409 Conflict / 422 Unprocessable
+            else New Key
+                Idem->>DB: Lock Key (Insert Pending)
+                Idem->>Handler: Process Request
+
+                Handler->>Handler: Validate Input (Mod11, Regex)
+                Handler->>DB: Insert Entry
+
+                alt Insert Success
+                    DB-->>Handler: ID
+                    Handler->>Idem: Update Idempotency Record (Success)
+                    Handler-->>Client: 201 Created
+                else Duplicate Key
+                    DB-->>Handler: Error
+                    Handler-->>Client: 409 Conflict
+                end
+            end
+        end
+    end
+```
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| PORT | 3000 | Server port |
-| MONGODB_URI | mongodb://localhost:27017/dict | MongoDB connection string |
-| REDIS_URI | redis://localhost:6379 | Redis connection string |
-| JWT_SECRET | (required) | Secret key for JWT signing |
-| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4318/v1/traces | OpenTelemetry endpoint |
-| RATE_LIMIT_BUCKET_SIZE | 60 | Max requests per window |
-| RATE_LIMIT_REFILL_SECONDS | 60 | Rate limit window in seconds |
+| Variable                    | Default                         | Description                  |
+| --------------------------- | ------------------------------- | ---------------------------- |
+| PORT                        | 3000                            | Server port                  |
+| MONGODB_URI                 | mongodb://localhost:27017/dict  | MongoDB connection string    |
+| REDIS_URI                   | redis://localhost:6379          | Redis connection string      |
+| JWT_SECRET                  | (required)                      | Secret key for JWT signing   |
+| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4318/v1/traces | OpenTelemetry endpoint       |
+| RATE_LIMIT_BUCKET_SIZE      | 60                              | Max requests per window      |
+| RATE_LIMIT_REFILL_SECONDS   | 60                              | Rate limit window in seconds |
 
 ## Development
 
@@ -200,9 +294,6 @@ go test ./...
 
 # Format code
 go fmt ./...
-
-# Lint (requires golangci-lint)
-golangci-lint run
 ```
 
 ## License

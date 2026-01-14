@@ -7,6 +7,7 @@ import (
 	"github.com/dict-simulator/go/internal/logger"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 	"go.uber.org/zap"
 )
 
@@ -19,7 +20,11 @@ func ConnectMongo(uri string) (*Mongo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	clientOptions := options.Client().ApplyURI(uri)
+	// Add OpenTelemetry instrumentation monitor
+	clientOptions := options.Client().
+		ApplyURI(uri).
+		SetMonitor(otelmongo.NewMonitor())
+
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		return nil, err
