@@ -28,14 +28,14 @@ func main() {
 	}
 
 	// 2. Initialize tracing
-	shutdownTracing, err := telemetry.InitTracer()
+	shutdownTracing, err := telemetry.InitTracer(config.Env.OTELExporterEndpoint)
 	if err != nil {
 		logger.Fatal("Failed to initialize tracer", zap.Error(err))
 	}
 	defer shutdownTracing(context.Background())
 
 	// 3. Initialize logging provider for OTEL export
-	shutdownLogging, err := telemetry.InitLoggerProvider()
+	shutdownLogging, err := telemetry.InitLoggerProvider(config.Env.OTELExporterEndpoint)
 	if err != nil {
 		logger.Fatal("Failed to initialize log provider", zap.Error(err))
 	}
@@ -80,14 +80,15 @@ func main() {
 
 	// Initialize services/components
 	rateLimitBucket := ratelimit.NewBucket(redisDB.Client)
-	mwManager := middleware.NewManager(idempotencyRepo, rateLimitBucket)
+	mwManager := middleware.NewManager(idempotencyRepo, rateLimitBucket, config.Env.RateLimitEnabled)
 
 	// Initialize handlers
-	authHandler := auth.NewHandler(userRepo)
+	authHandler := auth.NewHandler(userRepo, config.Env.JWTSecret)
 	entriesHandler := entries.NewHandler(entryRepo)
 
 	// Setup router (now with otelhttp instrumentation)
-	r := router.Setup(authHandler, entriesHandler, mwManager)
+	// Pass default rate limiting policies
+	r := router.Setup(config.Env, authHandler, entriesHandler, mwManager, ratelimit.DefaultPolicies())
 
 	// Start server
 	srv := server.New(r, config.Env.Port)

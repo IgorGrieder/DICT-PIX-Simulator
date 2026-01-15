@@ -16,8 +16,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/dict-simulator/go/internal/config"
 )
 
 var (
@@ -39,10 +37,10 @@ func parseEndpoint(endpoint string) string {
 }
 
 // InitTracer initializes the OpenTelemetry tracer and returns a shutdown function
-func InitTracer() (func(context.Context) error, error) {
+func InitTracer(otelEndpoint string) (func(context.Context) error, error) {
 	ctx := context.Background()
 
-	endpoint := parseEndpoint(config.Env.OTELExporterEndpoint)
+	endpoint := parseEndpoint(otelEndpoint)
 
 	exporter, err := otlptracehttp.New(ctx,
 		otlptracehttp.WithEndpoint(endpoint),
@@ -82,10 +80,10 @@ func InitTracer() (func(context.Context) error, error) {
 }
 
 // InitLoggerProvider initializes the OpenTelemetry log provider for otelzap
-func InitLoggerProvider() (func(context.Context) error, error) {
+func InitLoggerProvider(otelEndpoint string) (func(context.Context) error, error) {
 	ctx := context.Background()
 
-	endpoint := parseEndpoint(config.Env.OTELExporterEndpoint)
+	endpoint := parseEndpoint(otelEndpoint)
 
 	exporter, err := otlploghttp.New(ctx,
 		otlploghttp.WithEndpoint(endpoint),
