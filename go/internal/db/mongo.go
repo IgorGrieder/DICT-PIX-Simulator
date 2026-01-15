@@ -57,3 +57,12 @@ func (m *Mongo) Disconnect() error {
 func (m *Mongo) Collection(name string) *mongo.Collection {
 	return m.Database.Collection(name)
 }
+
+// WithDatabase returns a new Mongo instance pointing to a different database
+// reusing the same client connection
+func (m *Mongo) WithDatabase(name string) *Mongo {
+	return &Mongo{
+		Client:   m.Client,
+		Database: m.Client.Database(name),
+	}
+}

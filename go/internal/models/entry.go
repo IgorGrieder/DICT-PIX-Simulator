@@ -39,6 +39,7 @@ type Account struct {
 	Branch        string      `bson:"branch" json:"branch" validate:"required,len=4,numeric"`
 	AccountNumber string      `bson:"accountNumber" json:"accountNumber" validate:"required"`
 	AccountType   AccountType `bson:"accountType" json:"accountType" validate:"required,oneof=CACC SVGS SLRY"`
+	OpeningDate   time.Time   `bson:"openingDate" json:"openingDate" validate:"required"`
 }
 
 // Owner represents the account owner information
@@ -51,23 +52,25 @@ type Owner struct {
 
 // Entry represents a DICT entry (Pix key registration)
 type Entry struct {
-	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Key       string             `bson:"key" json:"key"`
-	KeyType   KeyType            `bson:"keyType" json:"keyType"`
-	Account   Account            `bson:"account" json:"account"`
-	Owner     Owner              `bson:"owner" json:"owner"`
-	CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt"`
+	ID               primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Key              string             `bson:"key" json:"key"`
+	KeyType          KeyType            `bson:"keyType" json:"keyType"`
+	Account          Account            `bson:"account" json:"account"`
+	Owner            Owner              `bson:"owner" json:"owner"`
+	CreatedAt        time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt        time.Time          `bson:"updatedAt" json:"updatedAt"`
+	KeyOwnershipDate time.Time          `bson:"keyOwnershipDate" json:"keyOwnershipDate"`
 }
 
 // EntryResponse represents the API response for an entry
 type EntryResponse struct {
-	Key       string    `json:"key"`
-	KeyType   KeyType   `json:"keyType"`
-	Account   Account   `json:"account"`
-	Owner     Owner     `json:"owner"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	Key              string    `json:"key"`
+	KeyType          KeyType   `json:"keyType"`
+	Account          Account   `json:"account"`
+	Owner            Owner     `json:"owner"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+	KeyOwnershipDate time.Time `json:"keyOwnershipDate"`
 }
 
 // CreateEntryRequest represents the request body for creating an entry
@@ -88,6 +91,14 @@ type UpdateEntryRequest struct {
 	Account *Account `json:"account,omitempty" validate:"omitempty,dive"`
 	Owner   *Owner   `json:"owner,omitempty" validate:"omitempty,dive"`
 	Reason  Reason   `json:"reason" validate:"required,oneof=USER_REQUESTED BRANCH_TRANSFER RECONCILIATION RFB_VALIDATION"`
+}
+
+// DeleteEntryRequest represents the request body for deleting an entry
+// Per DICT spec: POST /entries/{Key}/delete with request body
+type DeleteEntryRequest struct {
+	Key         string `json:"key" validate:"required"`
+	Participant string `json:"participant" validate:"required,len=8,numeric"`
+	Reason      Reason `json:"reason" validate:"required,oneof=USER_REQUESTED ACCOUNT_CLOSURE RECONCILIATION FRAUD RFB_VALIDATION"`
 }
 
 // DeleteEntryResponse represents the response for deleting an entry
@@ -128,12 +139,13 @@ func (r *EntryRepository) EnsureIndexes(ctx context.Context) error {
 func (r *EntryRepository) Create(ctx context.Context, req *CreateEntryRequest) (*Entry, error) {
 	now := time.Now()
 	entry := &Entry{
-		Key:       req.Key,
-		KeyType:   req.KeyType,
-		Account:   req.Account,
-		Owner:     req.Owner,
-		CreatedAt: now,
-		UpdatedAt: now,
+		Key:              req.Key,
+		KeyType:          req.KeyType,
+		Account:          req.Account,
+		Owner:            req.Owner,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+		KeyOwnershipDate: now, // For new entries, ownership date equals creation date
 	}
 
 	result, err := r.collection.InsertOne(ctx, entry)
@@ -216,11 +228,12 @@ func (r *EntryRepository) UpdateByKey(ctx context.Context, key string, req *Upda
 // ToResponse converts Entry to EntryResponse
 func (e *Entry) ToResponse() EntryResponse {
 	return EntryResponse{
-		Key:       e.Key,
-		KeyType:   e.KeyType,
-		Account:   e.Account,
-		Owner:     e.Owner,
-		CreatedAt: e.CreatedAt,
-		UpdatedAt: e.UpdatedAt,
+		Key:              e.Key,
+		KeyType:          e.KeyType,
+		Account:          e.Account,
+		Owner:            e.Owner,
+		CreatedAt:        e.CreatedAt,
+		UpdatedAt:        e.UpdatedAt,
+		KeyOwnershipDate: e.KeyOwnershipDate,
 	}
 }

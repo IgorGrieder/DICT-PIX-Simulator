@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
 
-	"github.com/dict-simulator/go/internal/config"
+	"github.com/dict-simulator/go/internal/httputil"
 	"github.com/dict-simulator/go/internal/ratelimit"
 )
 
@@ -41,7 +41,7 @@ func (m *Manager) RateLimiterWithPolicy(policy ratelimit.Policy) func(http.Handl
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Skip rate limiting if disabled
-			if !config.Env.RateLimitEnabled {
+			if !m.rateLimitEnabled {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -76,7 +76,7 @@ func (m *Manager) RateLimiterWithPolicy(policy ratelimit.Policy) func(http.Handl
 
 			// If no tokens available, return 429
 			if !state.Allowed {
-				writeRateLimitError(w)
+				writeRateLimitError(w, r)
 				return
 			}
 
@@ -107,12 +107,17 @@ func setRateLimitHeaders(w http.ResponseWriter, policy ratelimit.Policy, state *
 	w.Header().Set("X-RateLimit-Policy", string(policy.Name))
 }
 
-// writeRateLimitError writes a 429 Too Many Requests response
-func writeRateLimitError(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusTooManyRequests)
-	json.NewEncoder(w).Encode(map[string]string{
-		"error":   "TOO_MANY_REQUESTS",
-		"message": "Rate limit exceeded. Please try again later.",
-	})
+// writeRateLimitError writes a 429 Too Many Requests response with DICT-compliant format
+func writeRateLimitError(w http.ResponseWriter, r *http.Request) {
+	correlationID := httputil.GetCorrelationID(r)
+
+	response := httputil.APIResponse{
+		ResponseTime:  time.Now().UTC(),
+		CorrelationId: correlationID,
+		Error:         "TOO_MANY_REQUESTS",
+		Message:       "Rate limit exceeded. Please try again later.",
+	}
+
+	w.Header().Set(httputil.CorrelationIDHeader, correlationID)
+	httputil.WriteJSON(w, http.StatusTooManyRequests, response)
 }

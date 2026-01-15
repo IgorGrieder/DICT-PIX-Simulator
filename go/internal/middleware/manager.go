@@ -6,13 +6,15 @@ import (
 )
 
 type Manager struct {
-	idempotencyRepo *models.IdempotencyRepository
-	rateLimiter     *ratelimit.Bucket
+	idempotencyRepo  *models.IdempotencyRepository
+	rateLimiter      *ratelimit.Bucket
+	rateLimitEnabled bool
 }
 
-func NewManager(idempotencyRepo *models.IdempotencyRepository, rateLimiter *ratelimit.Bucket) *Manager {
+func NewManager(idempotencyRepo *models.IdempotencyRepository, rateLimiter *ratelimit.Bucket, rateLimitEnabled bool) *Manager {
 	return &Manager{
-		idempotencyRepo: idempotencyRepo,
-		rateLimiter:     rateLimiter,
+		idempotencyRepo:  idempotencyRepo,
+		rateLimiter:      rateLimiter,
+		rateLimitEnabled: rateLimitEnabled,
 	}
 }
