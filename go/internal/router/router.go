@@ -5,6 +5,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	"github.com/dict-simulator/go/internal/config"
 	"github.com/dict-simulator/go/internal/middleware"
 	"github.com/dict-simulator/go/internal/modules/auth"
 	"github.com/dict-simulator/go/internal/modules/entries"
@@ -15,28 +16,30 @@ import (
 
 // spanNames maps route patterns to custom span names (preserving current naming convention)
 var spanNames = map[string]string{
-	"GET /health":           "health",
-	"POST /auth/register":   "auth.register",
-	"POST /auth/login":      "auth.login",
-	"POST /entries":         "entries.create",
-	"GET /entries/{key}":    "entries.get",
-	"PUT /entries/{key}":    "entries.update",
-	"DELETE /entries/{key}": "entries.delete",
+	"GET /health":                "health",
+	"POST /auth/register":        "auth.register",
+	"POST /auth/login":           "auth.login",
+	"POST /entries":              "entries.create",
+	"GET /entries/{key}":         "entries.get",
+	"PUT /entries/{key}":         "entries.update",
+	"POST /entries/{key}/delete": "entries.delete",
 }
 
 // Setup creates and configures the HTTP router with all routes
+// policies parameter allows injecting custom rate limiting policies for testing
 func Setup(
+	cfg *config.Config,
 	authHandler *auth.Handler,
 	entriesHandler *entries.Handler,
 	mwManager *middleware.Manager,
+	policies map[ratelimit.PolicyName]ratelimit.Policy,
 ) http.Handler {
 	mux := http.NewServeMux()
 
 	// Initialize health handler (stateless)
 	healthHandler := health.NewHandler()
 
-	// Get rate limiting policies
-	policies := ratelimit.DefaultPolicies()
+	// Use provided policies (allows test override)
 
 	// Health and metrics endpoints (no tracing wrapper needed - otelhttp will handle it)
 	mux.HandleFunc("GET /health", healthHandler.Health)
@@ -50,7 +53,7 @@ func Setup(
 	// POST /entries - createEntry uses ENTRIES_WRITE policy (1200/min, 36000 bucket)
 	mux.Handle("POST /entries", middleware.Chain(
 		http.HandlerFunc(entriesHandler.Create),
-		middleware.AuthMiddleware,
+		middleware.AuthMiddleware(cfg.JWTSecret),
 		mwManager.RateLimiterWithPolicy(policies[ratelimit.PolicyEntriesWrite]),
 		mwManager.Idempotency,
 	))
@@ -59,21 +62,22 @@ func Setup(
 	// Category H: 2/min, 50 bucket, 404 costs 3 tokens
 	mux.Handle("GET /entries/{key}", middleware.Chain(
 		http.HandlerFunc(entriesHandler.Get),
-		middleware.AuthMiddleware,
+		middleware.AuthMiddleware(cfg.JWTSecret),
 		mwManager.RateLimiterWithPolicy(policies[ratelimit.PolicyEntriesReadParticipant]),
 	))
 
 	// PUT /entries/{key} - updateEntry uses ENTRIES_UPDATE policy (600/min, 600 bucket)
 	mux.Handle("PUT /entries/{key}", middleware.Chain(
 		http.HandlerFunc(entriesHandler.Update),
-		middleware.AuthMiddleware,
+		middleware.AuthMiddleware(cfg.JWTSecret),
 		mwManager.RateLimiterWithPolicy(policies[ratelimit.PolicyEntriesUpdate]),
 	))
 
-	// DELETE /entries/{key} - deleteEntry uses ENTRIES_WRITE policy (same as create)
-	mux.Handle("DELETE /entries/{key}", middleware.Chain(
+	// POST /entries/{key}/delete - deleteEntry uses ENTRIES_WRITE policy (same as create)
+	// Per DICT spec: uses POST method with request body instead of DELETE
+	mux.Handle("POST /entries/{key}/delete", middleware.Chain(
 		http.HandlerFunc(entriesHandler.Delete),
-		middleware.AuthMiddleware,
+		middleware.AuthMiddleware(cfg.JWTSecret),
 		mwManager.RateLimiterWithPolicy(policies[ratelimit.PolicyEntriesWrite]),
 	))
 

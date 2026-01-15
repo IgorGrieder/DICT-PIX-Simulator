@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/dict-simulator/go/internal/config"
 	"github.com/dict-simulator/go/internal/httputil"
 	"github.com/dict-simulator/go/internal/middleware"
 	"github.com/dict-simulator/go/internal/models"
@@ -35,13 +34,15 @@ type AuthResponse struct {
 
 // Handler handles auth-related HTTP requests
 type Handler struct {
-	repo *models.UserRepository
+	repo      *models.UserRepository
+	jwtSecret string
 }
 
 // NewHandler creates a new auth handler
-func NewHandler(repo *models.UserRepository) *Handler {
+func NewHandler(repo *models.UserRepository, jwtSecret string) *Handler {
 	return &Handler{
-		repo: repo,
+		repo:      repo,
+		jwtSecret: jwtSecret,
 	}
 }
 
@@ -49,13 +50,13 @@ func NewHandler(repo *models.UserRepository) *Handler {
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
 		return
 	}
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -64,30 +65,30 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Check if user already exists
 	existingUser, err := h.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to check existing user")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to check existing user")
 		return
 	}
 
 	if existingUser != nil {
-		httputil.WriteError(w, http.StatusConflict, "USER_ALREADY_EXISTS", "User with this email already exists")
+		httputil.WriteAPIError(w, r, http.StatusConflict, "USER_ALREADY_EXISTS", "User with this email already exists")
 		return
 	}
 
 	// Create user
 	user, err := h.repo.Create(ctx, req.Email, req.Password, req.Name)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create user")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create user")
 		return
 	}
 
 	// Generate JWT
-	token, err := generateToken(user)
+	token, err := h.generateToken(user)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to generate token")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to generate token")
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusCreated, AuthResponse{
+	httputil.WriteAPIResponse(w, r, http.StatusCreated, AuthResponse{
 		Token: token,
 		User:  user.ToResponse(),
 	})
@@ -97,13 +98,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
 		return
 	}
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -112,29 +113,29 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	// Find user
 	user, err := h.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find user")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find user")
 		return
 	}
 
 	if user == nil {
-		httputil.WriteError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
+		httputil.WriteAPIError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
 		return
 	}
 
 	// Check password
 	if !user.CheckPassword(req.Password) {
-		httputil.WriteError(w, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
+		httputil.WriteAPIError(w, r, http.StatusUnauthorized, "INVALID_CREDENTIALS", "Invalid email or password")
 		return
 	}
 
 	// Generate JWT
-	token, err := generateToken(user)
+	token, err := h.generateToken(user)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to generate token")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to generate token")
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, AuthResponse{
+	httputil.WriteAPIResponse(w, r, http.StatusOK, AuthResponse{
 		Token: token,
 		User:  user.ToResponse(),
 	})
@@ -144,17 +145,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	userID := r.Header.Get("X-User-Id")
 	if userID == "" {
-		httputil.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", "User ID not found")
+		httputil.WriteAPIError(w, r, http.StatusUnauthorized, "UNAUTHORIZED", "User ID not found")
 		return
 	}
 
 	// For now, we just return the ID as we don't have FindByID yet
-	httputil.WriteJSON(w, http.StatusOK, map[string]string{
+	httputil.WriteAPIResponse(w, r, http.StatusOK, map[string]string{
 		"id": userID,
 	})
 }
 
-func generateToken(user *models.User) (string, error) {
+func (h *Handler) generateToken(user *models.User) (string, error) {
 	claims := middleware.JWTClaims{
 		UserID: user.ID.Hex(),
 		Email:  user.Email,
@@ -166,5 +167,5 @@ func generateToken(user *models.User) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(config.Env.JWTSecret))
+	return token.SignedString([]byte(h.jwtSecret))
 }

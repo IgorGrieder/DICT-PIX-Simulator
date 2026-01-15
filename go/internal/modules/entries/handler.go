@@ -25,20 +25,20 @@ func NewHandler(repo *models.EntryRepository) *Handler {
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
 		return
 	}
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
 	// Validate key format based on key type
 	validationResult := ValidateKey(req.Key, req.KeyType)
 	if !validationResult.Success {
-		httputil.WriteJSON(w, http.StatusBadRequest, validationResult.Error)
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, validationResult.Error.Type, validationResult.Error.Message)
 		return
 	}
 
@@ -47,30 +47,30 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	// Check if key already exists
 	existing, err := h.repo.FindByKey(ctx, req.Key)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to check existing entry")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to check existing entry")
 		return
 	}
 
 	if existing != nil {
-		httputil.WriteError(w, http.StatusConflict, "KEY_ALREADY_EXISTS", "This key is already registered in the directory")
+		httputil.WriteAPIError(w, r, http.StatusConflict, "KEY_ALREADY_EXISTS", "This key is already registered in the directory")
 		return
 	}
 
 	// Create entry
 	entry, err := h.repo.Create(ctx, &req)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create entry")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create entry")
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusCreated, entry.ToResponse())
+	httputil.WriteAPIResponse(w, r, http.StatusCreated, entry.ToResponse())
 }
 
 // Get handles getting an entry by key
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
 	if key == "" {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Key is required")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Key is required")
 		return
 	}
 
@@ -78,40 +78,80 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	entry, err := h.repo.FindByKey(ctx, key)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find entry")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find entry")
 		return
 	}
 
 	if entry == nil {
-		httputil.WriteError(w, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
+		httputil.WriteAPIError(w, r, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, entry.ToResponse())
+	httputil.WriteAPIResponse(w, r, http.StatusOK, entry.ToResponse())
 }
 
 // Delete handles deleting an entry by key
+// Per DICT spec: POST /entries/{key}/delete with request body
+// The participant in the request must match the entry's participant
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
 	if key == "" {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Key is required")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Key is required")
+		return
+	}
+
+	var req models.DeleteEntryRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		return
+	}
+
+	// Ensure key in path matches key in body
+	if req.Key != "" && req.Key != key {
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Key in path must match key in body")
+		return
+	}
+	req.Key = key
+
+	// Validate request using validator library
+	if err := validation.Validate(&req); err != nil {
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
 	ctx := r.Context()
 
+	// Check if entry exists and validate participant
+	existing, err := h.repo.FindByKey(ctx, key)
+	if err != nil {
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find entry")
+		return
+	}
+
+	if existing == nil {
+		httputil.WriteAPIError(w, r, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
+		return
+	}
+
+	// Verify participant matches the entry's participant (authorization check)
+	if existing.Account.Participant != req.Participant {
+		httputil.WriteAPIError(w, r, http.StatusForbidden, "FORBIDDEN", "Participant does not match the entry's participant")
+		return
+	}
+
+	// Delete the entry
 	entry, err := h.repo.DeleteByKey(ctx, key)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete entry")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete entry")
 		return
 	}
 
 	if entry == nil {
-		httputil.WriteError(w, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
+		httputil.WriteAPIError(w, r, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, models.DeleteEntryResponse{
+	httputil.WriteAPIResponse(w, r, http.StatusOK, models.DeleteEntryResponse{
 		Message: "Entry deleted successfully",
 		Key:     entry.Key,
 	})
@@ -125,26 +165,26 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
 	if key == "" {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Key is required")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Key is required")
 		return
 	}
 
 	var req models.UpdateEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Invalid request body")
 		return
 	}
 
 	// Ensure key in path matches key in body
 	if req.Key != "" && req.Key != key {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", "Key in path must match key in body")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", "Key in path must match key in body")
 		return
 	}
 	req.Key = key
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 		return
 	}
 
@@ -153,32 +193,32 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	// Check if entry exists
 	existing, err := h.repo.FindByKey(ctx, key)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find entry")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to find entry")
 		return
 	}
 
 	if existing == nil {
-		httputil.WriteError(w, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
+		httputil.WriteAPIError(w, r, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
 		return
 	}
 
 	// EVP keys cannot be updated per DICT spec
 	if existing.KeyType == models.KeyTypeEVP {
-		httputil.WriteError(w, http.StatusBadRequest, "INVALID_OPERATION", "EVP keys cannot be updated")
+		httputil.WriteAPIError(w, r, http.StatusBadRequest, "INVALID_OPERATION", "EVP keys cannot be updated")
 		return
 	}
 
 	// Update the entry
 	entry, err := h.repo.UpdateByKey(ctx, key, &req)
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update entry")
+		httputil.WriteAPIError(w, r, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update entry")
 		return
 	}
 
 	if entry == nil {
-		httputil.WriteError(w, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
+		httputil.WriteAPIError(w, r, http.StatusNotFound, "ENTRY_NOT_FOUND", "No entry found for this key")
 		return
 	}
 
-	httputil.WriteJSON(w, http.StatusOK, entry.ToResponse())
+	httputil.WriteAPIResponse(w, r, http.StatusOK, entry.ToResponse())
 }
