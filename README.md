@@ -96,13 +96,16 @@ curl -X POST http://localhost:3000/entries \
       "participant": "12345678",
       "branch": "0001",
       "accountNumber": "123456",
-      "accountType": "CACC"
+      "accountType": "CACC",
+      "openingDate": "2024-01-15T00:00:00Z"
     },
     "owner": {
       "type": "NATURAL_PERSON",
       "taxIdNumber": "12345678909",
       "name": "John Doe"
-    }
+    },
+    "reason": "USER_REQUESTED",
+    "requestId": "unique-request-uuid"
   }'
 ```
 
@@ -115,15 +118,55 @@ curl http://localhost:3000/entries/12345678909 \
 
 #### Delete Entry
 
+Per DICT specification, delete uses POST with a request body:
+
 ```bash
-curl -X DELETE http://localhost:3000/entries/12345678909 \
-  -H "Authorization: <your-jwt-token>"
+curl -X POST http://localhost:3000/entries/12345678909/delete \
+  -H "Content-Type: application/json" \
+  -H "Authorization: <your-jwt-token>" \
+  -d '{
+    "key": "12345678909",
+    "participant": "12345678",
+    "reason": "USER_REQUESTED"
+  }'
 ```
+
+Valid reasons: `USER_REQUESTED`, `ACCOUNT_CLOSURE`, `BRANCH_TRANSFER`, `RECONCILIATION`, `FRAUD`
 
 ### Health Check
 
 ```bash
 curl http://localhost:3000/health
+```
+
+## API Response Format
+
+All API responses follow a consistent DICT-compliant format:
+
+```json
+{
+  "responseTime": "2026-01-14T10:00:00.000Z",
+  "correlationId": "550e8400-e29b-41d4-a716-446655440000",
+  "data": { ... }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `responseTime` | ISO 8601 timestamp of when the response was generated |
+| `correlationId` | UUID from `X-Correlation-Id` header, or auto-generated if not provided |
+| `data` | The actual response payload |
+| `error` | Error code (only on errors) |
+| `message` | Human-readable error message (only on errors) |
+
+### Correlation ID
+
+Pass `X-Correlation-Id` header to trace requests across systems:
+
+```bash
+curl http://localhost:3000/entries/12345678909 \
+  -H "Authorization: <your-jwt-token>" \
+  -H "X-Correlation-Id: my-trace-id-123"
 ```
 
 ## Key Types
@@ -142,33 +185,46 @@ curl http://localhost:3000/health
 go/
 ├── cmd/
 │   └── server/
-│       └── main.go           # Entry point with HTTP router
+│       └── main.go             # Entry point with HTTP router
 ├── internal/
 │   ├── config/
-│   │   └── env.go            # Environment configuration
+│   │   └── env.go              # Environment configuration
 │   ├── db/
-│   │   ├── mongo.go          # MongoDB connection
-│   │   └── redis.go          # Redis connection
+│   │   ├── mongo.go            # MongoDB connection
+│   │   └── redis.go            # Redis connection
+│   ├── httputil/
+│   │   └── response.go         # API response helpers (ResponseTime, CorrelationId)
+│   ├── integration/
+│   │   ├── setup_test.go       # TestMain with testcontainers
+│   │   └── entries_test.go     # Integration tests
 │   ├── middleware/
-│   │   ├── auth.go           # JWT authentication
-│   │   ├── rate_limiter.go   # Rate limiting
-│   │   └── idempotency.go    # Idempotency support
+│   │   ├── auth.go             # JWT authentication
+│   │   ├── rate_limiter.go     # Rate limiting
+│   │   └── idempotency.go      # Idempotency support
 │   ├── models/
-│   │   ├── user.go           # User model
-│   │   ├── entry.go          # Entry model
-│   │   └── idempotency.go    # Idempotency record
+│   │   ├── user.go             # User model
+│   │   ├── entry.go            # Entry model (with OpeningDate, KeyOwnershipDate)
+│   │   └── idempotency.go      # Idempotency record
+│   ├── ratelimit/
+│   │   ├── bucket.go           # Token bucket algorithm
+│   │   └── policy.go           # Rate limit policies
+│   ├── router/
+│   │   └── router.go           # HTTP router setup
 │   └── modules/
 │       ├── auth/
-│       │   └── handler.go    # Auth handlers
+│       │   └── handler.go      # Auth handlers
 │       └── entries/
-│           ├── handler.go    # Entry handlers
-│           └── validator.go  # Key validation
+│           ├── handler.go      # Entry handlers (DICT-compliant)
+│           └── validator.go    # Key validation (CPF, CNPJ, Email, Phone, EVP)
+├── k6/
+│   ├── entries.test.js         # CRUD load tests
+│   ├── idempotency.test.js     # Idempotency tests
+│   └── stress.test.js          # Stress tests
 ├── Dockerfile
 ├── docker-compose.yml
 ├── go.mod
 ├── go.sum
-├── .env.example
-└── README.md
+└── .env.example
 ```
 
 ## Data Modeling
@@ -183,6 +239,7 @@ classDiagram
         +KeyType KeyType
         +Account Account
         +Owner Owner
+        +Time KeyOwnershipDate
         +Time CreatedAt
         +Time UpdatedAt
     }
@@ -191,6 +248,7 @@ classDiagram
         +String Branch
         +String AccountNumber
         +AccountType AccountType
+        +Time OpeningDate
     }
     class Owner {
         +OwnerType Type
@@ -289,11 +347,57 @@ sequenceDiagram
 # Build
 go build -o server ./cmd/server
 
-# Run tests
+# Run unit tests
+go test ./internal/modules/... ./internal/ratelimit/...
+
+# Run integration tests (requires Docker)
+go test -v ./internal/integration/... -timeout 120s
+
+# Run all tests
 go test ./...
 
 # Format code
 go fmt ./...
+```
+
+## Testing
+
+### Unit Tests
+
+Unit tests cover validators, rate limiting logic, and handler behavior:
+
+```bash
+go test -v ./internal/modules/... ./internal/ratelimit/...
+```
+
+### Integration Tests
+
+Integration tests use [testcontainers-go](https://golang.testcontainers.org/) to spin up real MongoDB and Redis containers. They test:
+
+- CRUD operations on entries
+- Key validation (CPF, CNPJ, Email, Phone, EVP)
+- Idempotency behavior
+- Correlation ID handling
+- Authorization checks
+- Rate limiting headers
+
+```bash
+# Requires Docker running
+go test -v ./internal/integration/... -timeout 120s
+```
+
+### Load Tests (k6)
+
+Performance tests using [k6](https://k6.io/):
+
+```bash
+# Start the server first
+docker-compose up -d
+
+# Run load tests
+k6 run k6/entries.test.js
+k6 run k6/idempotency.test.js
+k6 run k6/stress.test.js
 ```
 
 ## License
