@@ -30,6 +30,15 @@ function generateValidCPF() {
 	return digits.join("");
 }
 
+// Generate UUID v4 for requestId
+function generateUUID() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+		const r = Math.random() * 16 | 0;
+		const v = c === 'x' ? r : (r & 0x3 | 0x8);
+		return v.toString(16);
+	});
+}
+
 export const options = {
 	scenarios: {
 		idempotency_test: {
@@ -46,10 +55,11 @@ export const options = {
 export default function () {
 	const cpf = generateValidCPF();
 	const idempotencyKey = `idem-${randomString(16)}`;
+	const requestId = generateUUID();
 
 	const headers = {
 		"Content-Type": "application/json",
-		"x-idempotency-key": idempotencyKey,
+		"X-Idempotency-Key": idempotencyKey,
 	};
 
 	const payload = JSON.stringify({
@@ -60,12 +70,15 @@ export default function () {
 			branch: "0001",
 			accountNumber: "123456",
 			accountType: "CACC",
+			openingDate: new Date().toISOString(),
 		},
 		owner: {
 			type: "NATURAL_PERSON",
 			taxIdNumber: cpf,
 			name: "Idempotency Test",
 		},
+		reason: "USER_REQUESTED",
+		requestId: requestId,
 	});
 
 	// First request - should create
@@ -83,8 +96,15 @@ export default function () {
 		"second request: same body": (r) => r.body === res1.body,
 	});
 
-	// Cleanup
-	http.del(`${BASE_URL}/entries/${cpf}`);
+	// Cleanup - now uses POST /entries/{key}/delete per DICT spec
+	const deletePayload = JSON.stringify({
+		key: cpf,
+		participant: "12345678",
+		reason: "USER_REQUESTED",
+	});
+	http.post(`${BASE_URL}/entries/${cpf}/delete`, deletePayload, { 
+		headers: { "Content-Type": "application/json" } 
+	});
 
 	sleep(0.5);
 }
