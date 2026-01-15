@@ -70,17 +70,20 @@ func (r *IdempotencyRepository) ClaimKey(ctx context.Context, key string) (bool,
 	if err == nil && record != nil {
 		return false, record, nil
 	}
+
 	if err != nil && err != mongo.ErrNoDocuments { // Unexpected error
 		return false, nil, err
 	}
 
+	record = &IdempotencyRecord{
+		Key:        key,
+		StatusCode: 0,
+		CreatedAt:  time.Now().UTC(),
+	}
+
 	filter := bson.M{"key": key}
 	update := bson.M{
-		"$setOnInsert": bson.M{
-			"key":        key,
-			"statusCode": 0, // Processing marker
-			"createdAt":  nil,
-		},
+		"$setOnInsert": record,
 	}
 	opts := options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.Before)
 

@@ -148,7 +148,7 @@ func (b *Bucket) GetState(ctx context.Context, policy Policy, identifier string)
 	return b.Check(ctx, policy, identifier)
 }
 
-// Reset resets a bucket to full capacity (useful for testing)
+// Reset resets a bucket to full capacity
 func (b *Bucket) Reset(ctx context.Context, policy Policy, identifier string) error {
 	tokensKey := b.tokensKey(policy.Name, identifier)
 	lastRefillKey := b.lastRefillKey(policy.Name, identifier)

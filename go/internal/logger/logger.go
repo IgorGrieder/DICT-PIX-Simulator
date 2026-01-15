@@ -41,22 +41,17 @@ func Init(env string, logProvider otellog.LoggerProvider) error {
 		return err
 	}
 
-	// If we have a LoggerProvider, create a tee core to output to both stdout and OTEL
-	if logProvider != nil {
-		stdoutCore := stdoutLogger.Core()
+	stdoutCore := stdoutLogger.Core()
 
-		// Create otelzap core for OTEL export
-		otelCore := otelzap.NewCore("dict-simulator",
-			otelzap.WithLoggerProvider(logProvider),
-			otelzap.WithVersion("1.0.0"),
-		)
+	// Create otelzap core for OTEL export
+	otelCore := otelzap.NewCore("dict-simulator",
+		otelzap.WithLoggerProvider(logProvider),
+		otelzap.WithVersion("1.0.0"),
+	)
 
-		// Combine both cores: logs go to stdout AND OTEL
-		combinedCore := zapcore.NewTee(stdoutCore, otelCore)
-		Log = zap.New(combinedCore, zap.AddCaller())
-	} else {
-		Log = stdoutLogger
-	}
+	// Combine both cores: logs go to stdout AND OTEL
+	combinedCore := zapcore.NewTee(stdoutCore, otelCore)
+	Log = zap.New(combinedCore, zap.AddCaller())
 
 	zap.ReplaceGlobals(Log)
 	return nil

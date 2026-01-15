@@ -56,7 +56,7 @@ func (p Policy) CostForStatus(statusCode int) int {
 }
 
 // DefaultPolicies returns the DICT API rate limiting policies
-// Using Category H for participant antiscan (most restrictive, good for testing)
+// Using Category H for participant antiscan
 func DefaultPolicies() map[PolicyName]Policy {
 	return map[PolicyName]Policy{
 		PolicyEntriesWrite: {

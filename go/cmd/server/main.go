@@ -22,38 +22,29 @@ func main() {
 	// Load configuration
 	config.Load()
 
-	if err := logger.Init(config.Env.Environment, nil); err != nil {
-		panic("failed to initialize logger: " + err.Error())
-	}
-
-	// 2. Initialize tracing
 	shutdownTracing, err := telemetry.InitTracer(config.Env.OTELExporterEndpoint)
 	if err != nil {
 		logger.Fatal("Failed to initialize tracer", zap.Error(err))
 	}
 	defer shutdownTracing(context.Background())
 
-	// 3. Initialize logging provider for OTEL export
 	shutdownLogging, err := telemetry.InitLoggerProvider(config.Env.OTELExporterEndpoint)
 	if err != nil {
 		logger.Fatal("Failed to initialize log provider", zap.Error(err))
 	}
 	defer shutdownLogging(context.Background())
 
-	// 4. Re-initialize logger with OTEL export (dual output: stdout + OTEL)
 	if err := logger.Init(config.Env.Environment, telemetry.LoggerProvider); err != nil {
-		logger.Fatal("Failed to reinitialize logger with OTEL", zap.Error(err))
+		panic("failed to initialize logger: " + err.Error())
 	}
 	defer logger.Sync()
 
-	// 5. Connect to MongoDB (now with otelmongo instrumentation)
 	mongoDB, err := db.ConnectMongo(config.Env.MongoDBURI)
 	if err != nil {
 		logger.Fatal("Failed to connect to MongoDB", zap.Error(err))
 	}
 	defer mongoDB.Disconnect()
 
-	// 6. Connect to Redis (now with redisotel instrumentation)
 	redisDB, err := db.ConnectRedis(config.Env.RedisURI)
 	if err != nil {
 		logger.Fatal("Failed to connect to Redis", zap.Error(err))
@@ -85,7 +76,6 @@ func main() {
 	authHandler := auth.NewHandler(userRepo, config.Env.JWTSecret)
 	entriesHandler := entries.NewHandler(entryRepo)
 
-	// Setup router (now with otelhttp instrumentation)
 	// Pass default rate limiting policies
 	r := router.Setup(config.Env, authHandler, entriesHandler, mwManager, ratelimit.DefaultPolicies())
 

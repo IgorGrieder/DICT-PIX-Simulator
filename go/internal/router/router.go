@@ -36,12 +36,10 @@ func Setup(
 ) http.Handler {
 	mux := http.NewServeMux()
 
-	// Initialize health handler (stateless)
+	// Initialize health handler
 	healthHandler := health.NewHandler()
 
-	// Use provided policies (allows test override)
-
-	// Health and metrics endpoints (no tracing wrapper needed - otelhttp will handle it)
+	// Health and metrics endpoints
 	mux.HandleFunc("GET /health", healthHandler.Health)
 	mux.Handle("GET /metrics", healthHandler.Metrics())
 
