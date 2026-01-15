@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/dict-simulator/go/internal/constants"
 )
 
 // CorrelationIDHeader is the header name for correlation ID
@@ -16,6 +18,7 @@ const CorrelationIDHeader = "X-Correlation-Id"
 type APIResponse struct {
 	ResponseTime  time.Time `json:"responseTime"`
 	CorrelationId string    `json:"correlationId"`
+	Code          string    `json:"code,omitempty"`
 	Data          any       `json:"data,omitempty"`
 	Error         string    `json:"error,omitempty"`
 	Message       string    `json:"message,omitempty"`
@@ -64,31 +67,58 @@ func WriteAPIResponse(w http.ResponseWriter, r *http.Request, status int, data a
 	json.NewEncoder(w).Encode(response)
 }
 
-// WriteAPIError writes a DICT-compliant error response with metadata
-// Includes ResponseTime and CorrelationId from request header
-func WriteAPIError(w http.ResponseWriter, r *http.Request, status int, errCode, message string) {
+// WriteAPIError writes a DICT-compliant error response with metadata using a predefined APIError.
+// Includes ResponseTime and CorrelationId from request header.
+func WriteAPIError(w http.ResponseWriter, r *http.Request, apiErr constants.APIError) {
 	correlationID := GetCorrelationID(r)
 
 	// Set correlation ID in response header as well
 	w.Header().Set(CorrelationIDHeader, correlationID)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
+	w.WriteHeader(apiErr.Status)
 
 	response := APIResponse{
 		ResponseTime:  time.Now().UTC(),
 		CorrelationId: correlationID,
-		Error:         errCode,
-		Message:       message,
+		Error:         apiErr.Code,
+		Message:       apiErr.Message,
 	}
 
 	json.NewEncoder(w).Encode(response)
 }
 
-// WriteError writes an error response with the given status code
-// This is the legacy function for backwards compatibility
-func WriteError(w http.ResponseWriter, status int, errCode, message string) {
-	WriteJSON(w, status, ErrorResponse{
-		Error:   errCode,
-		Message: message,
-	})
+// WriteError writes a DICT-compliant error response without requiring an http.Request.
+// Useful for middleware that may not have access to the full request context.
+// Note: Does not include CorrelationId since there's no request to extract it from.
+func WriteError(w http.ResponseWriter, apiErr constants.APIError) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(apiErr.Status)
+
+	response := APIResponse{
+		ResponseTime: time.Now().UTC(),
+		Error:        apiErr.Code,
+		Message:      apiErr.Message,
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// WriteAPISuccess writes a DICT-compliant success response with metadata using a predefined APISuccess.
+// Includes ResponseTime, CorrelationId, success code, and data.
+func WriteAPISuccess(w http.ResponseWriter, r *http.Request, apiSuccess constants.APISuccess, data any) {
+	correlationID := GetCorrelationID(r)
+
+	// Set correlation ID in response header as well
+	w.Header().Set(CorrelationIDHeader, correlationID)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(apiSuccess.Status)
+
+	response := APIResponse{
+		ResponseTime:  time.Now().UTC(),
+		CorrelationId: correlationID,
+		Code:          apiSuccess.Code,
+		Data:          data,
+	}
+
+	json.NewEncoder(w).Encode(response)
 }
