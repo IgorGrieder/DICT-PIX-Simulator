@@ -50,6 +50,22 @@ type Owner struct {
 	TradeName   string    `bson:"tradeName,omitempty" json:"tradeName,omitempty"` // Only for LEGAL_PERSON
 }
 
+// UpdateAccount represents partial account updates (no required validations)
+type UpdateAccount struct {
+	Participant   string      `bson:"participant,omitempty" json:"participant,omitempty" validate:"omitempty,len=8,numeric"`
+	Branch        string      `bson:"branch,omitempty" json:"branch,omitempty" validate:"omitempty,len=4,numeric"`
+	AccountNumber string      `bson:"accountNumber,omitempty" json:"accountNumber,omitempty"`
+	AccountType   AccountType `bson:"accountType,omitempty" json:"accountType,omitempty" validate:"omitempty,oneof=CACC SVGS SLRY"`
+	OpeningDate   *time.Time  `bson:"openingDate,omitempty" json:"openingDate,omitempty"`
+}
+
+// UpdateOwner represents partial owner updates (no required validations)
+// Per DICT spec: Only name and trade name can be updated
+type UpdateOwner struct {
+	Name      string `bson:"name,omitempty" json:"name,omitempty"`
+	TradeName string `bson:"tradeName,omitempty" json:"tradeName,omitempty"`
+}
+
 // Entry represents a DICT entry (Pix key registration)
 type Entry struct {
 	ID               primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
@@ -77,8 +93,8 @@ type EntryResponse struct {
 type CreateEntryRequest struct {
 	Key       string  `json:"key" validate:"required"`
 	KeyType   KeyType `json:"keyType" validate:"required,oneof=CPF CNPJ EMAIL PHONE EVP"`
-	Account   Account `json:"account" validate:"required,dive"`
-	Owner     Owner   `json:"owner" validate:"required,dive"`
+	Account   Account `json:"account" validate:"required"`
+	Owner     Owner   `json:"owner" validate:"required"`
 	Reason    Reason  `json:"reason" validate:"required,oneof=USER_REQUESTED RECONCILIATION"`
 	RequestId string  `json:"requestId" validate:"required,uuid4"`
 }
@@ -87,10 +103,10 @@ type CreateEntryRequest struct {
 // Per DICT spec: Only account info, name, and trade name can be updated
 // EVP keys cannot be updated
 type UpdateEntryRequest struct {
-	Key     string   `json:"key" validate:"required"`
-	Account *Account `json:"account,omitempty" validate:"omitempty,dive"`
-	Owner   *Owner   `json:"owner,omitempty" validate:"omitempty,dive"`
-	Reason  Reason   `json:"reason" validate:"required,oneof=USER_REQUESTED BRANCH_TRANSFER RECONCILIATION RFB_VALIDATION"`
+	Key     string         `json:"key" validate:"required"`
+	Account *UpdateAccount `json:"account,omitempty" validate:"omitempty"`
+	Owner   *UpdateOwner   `json:"owner,omitempty" validate:"omitempty"`
+	Reason  Reason         `json:"reason" validate:"required,oneof=USER_REQUESTED BRANCH_TRANSFER RECONCILIATION RFB_VALIDATION"`
 }
 
 // DeleteEntryRequest represents the request body for deleting an entry

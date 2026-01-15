@@ -87,10 +87,8 @@ func Setup(
 	)
 
 	// Wrap with otelhttp for automatic tracing with custom span names
-	handler := otelhttp.NewHandler(
-		innerHandler,
-		"dict-simulator",
-		otelhttp.WithTracerProvider(telemetry.TracerProvider),
+	// Build options conditionally - only include tracer provider if initialized
+	otelOptions := []otelhttp.Option{
 		otelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
 			// Use Go 1.22+ pattern matching to get the route pattern
 			// r.Pattern contains the matched pattern like "GET /entries/{key}"
@@ -104,6 +102,17 @@ func Setup(
 			}
 			return r.URL.Path
 		}),
+	}
+
+	// Only add tracer provider if telemetry is initialized
+	if telemetry.TracerProvider != nil {
+		otelOptions = append(otelOptions, otelhttp.WithTracerProvider(telemetry.TracerProvider))
+	}
+
+	handler := otelhttp.NewHandler(
+		innerHandler,
+		"dict-simulator",
+		otelOptions...,
 	)
 
 	return handler

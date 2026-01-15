@@ -128,6 +128,7 @@ func validateEmail(email string) ValidationResult {
 // validatePhone validates a phone number per DICT spec
 // DICT spec: ^\+[1-9]\d{1,14}$
 // Supports international E.164 format (not just Brazil)
+// E.164 requires minimum 8 digits total for valid phone numbers
 func validatePhone(phone string) ValidationResult {
 	invalidResult := ValidationResult{
 		Success: false,
@@ -139,7 +140,8 @@ func validatePhone(phone string) ValidationResult {
 
 	// DICT spec: E.164 international format
 	// Must start with + followed by country code (1-9) and up to 14 more digits
-	phoneRegex := regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
+	// Minimum length: +XX (country) + NNNNNN (subscriber) = at least 8 chars total
+	phoneRegex := regexp.MustCompile(`^\+[1-9]\d{6,14}$`)
 	if !phoneRegex.MatchString(phone) {
 		return invalidResult
 	}

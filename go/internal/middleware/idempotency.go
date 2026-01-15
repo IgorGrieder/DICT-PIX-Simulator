@@ -60,7 +60,7 @@ func (m *Manager) Idempotency(next http.Handler) http.Handler {
 		if !claimed && record != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(record.StatusCode)
-			json.NewEncoder(w).Encode(record.Response)
+			w.Write([]byte(record.Response))
 			return
 		}
 
@@ -68,10 +68,10 @@ func (m *Manager) Idempotency(next http.Handler) http.Handler {
 		recorder := newResponseRecorder(w)
 		next.ServeHTTP(recorder, r)
 
-		// Store the response (fire and forget, but synchronous to avoid data races)
-		var response any
-		if err := json.Unmarshal(recorder.body.Bytes(), &response); err == nil {
-			m.idempotencyRepo.Save(context.Background(), idempotencyKey, response, recorder.statusCode)
+		// Store the response as raw JSON string (fire and forget, but synchronous to avoid data races)
+		responseBody := recorder.body.String()
+		if json.Valid([]byte(responseBody)) {
+			m.idempotencyRepo.Save(context.Background(), idempotencyKey, responseBody, recorder.statusCode)
 		}
 	})
 }

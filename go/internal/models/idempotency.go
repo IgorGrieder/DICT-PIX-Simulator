@@ -14,7 +14,7 @@ import (
 // IdempotencyRecord represents a stored idempotent request response
 type IdempotencyRecord struct {
 	Key        string    `bson:"key"`
-	Response   any       `bson:"response"`
+	Response   string    `bson:"response"` // Store as raw JSON string to preserve format
 	StatusCode int       `bson:"statusCode"`
 	CreatedAt  time.Time `bson:"createdAt"`
 }
@@ -104,7 +104,7 @@ func (r *IdempotencyRepository) ClaimKey(ctx context.Context, key string) (bool,
 }
 
 // Save saves or updates an idempotency record
-func (r *IdempotencyRepository) Save(ctx context.Context, key string, response any, statusCode int) error {
+func (r *IdempotencyRepository) Save(ctx context.Context, key string, response string, statusCode int) error {
 	record := IdempotencyRecord{
 		Key:        key,
 		Response:   response,

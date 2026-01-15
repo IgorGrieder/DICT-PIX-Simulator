@@ -66,25 +66,40 @@ func Sync() {
 
 // Info logs an info message
 func Info(msg string, fields ...zap.Field) {
+	if Log == nil {
+		return
+	}
 	Log.WithOptions(zap.AddCallerSkip(1)).Info(msg, fields...)
 }
 
 // Error logs an error message
 func Error(msg string, fields ...zap.Field) {
+	if Log == nil {
+		return
+	}
 	Log.WithOptions(zap.AddCallerSkip(1)).Error(msg, fields...)
 }
 
 // Warn logs a warning message
 func Warn(msg string, fields ...zap.Field) {
+	if Log == nil {
+		return
+	}
 	Log.WithOptions(zap.AddCallerSkip(1)).Warn(msg, fields...)
 }
 
 // Debug logs a debug message
 func Debug(msg string, fields ...zap.Field) {
+	if Log == nil {
+		return
+	}
 	Log.WithOptions(zap.AddCallerSkip(1)).Debug(msg, fields...)
 }
 
 // Fatal logs a fatal message and exits
 func Fatal(msg string, fields ...zap.Field) {
+	if Log == nil {
+		return
+	}
 	Log.WithOptions(zap.AddCallerSkip(1)).Fatal(msg, fields...)
 }

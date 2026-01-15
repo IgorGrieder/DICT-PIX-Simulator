@@ -18,6 +18,7 @@ import (
 
 	"github.com/dict-simulator/go/internal/config"
 	"github.com/dict-simulator/go/internal/db"
+	"github.com/dict-simulator/go/internal/logger"
 	"github.com/dict-simulator/go/internal/middleware"
 	"github.com/dict-simulator/go/internal/models"
 	"github.com/dict-simulator/go/internal/modules/auth"
@@ -34,6 +35,13 @@ var (
 
 // TestMain sets up shared test infrastructure once for all tests
 func TestMain(m *testing.M) {
+	// Initialize logger before any database connections
+	if err := logger.Init("test", nil); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize logger: %v\n", err)
+		os.Exit(1)
+	}
+	defer logger.Sync()
+
 	ctx := context.Background()
 
 	// Start MongoDB container

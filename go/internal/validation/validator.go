@@ -64,8 +64,15 @@ func IsValidCPF(cpf string) bool {
 		return false
 	}
 
-	// All same digits is invalid
-	if matched, _ := regexp.MatchString(`^(\d)\1{10}$`, cpf); matched {
+	// All same digits is invalid (e.g., 00000000000, 11111111111, etc.)
+	allSame := true
+	for i := 1; i < len(cpf); i++ {
+		if cpf[i] != cpf[0] {
+			allSame = false
+			break
+		}
+	}
+	if allSame {
 		return false
 	}
 
@@ -105,8 +112,15 @@ func IsValidCNPJ(cnpj string) bool {
 		return false
 	}
 
-	// All same digits is invalid
-	if matched, _ := regexp.MatchString(`^(\d)\1{13}$`, cnpj); matched {
+	// All same digits is invalid (e.g., 00000000000000, 11111111111111, etc.)
+	allSame := true
+	for i := 1; i < len(cnpj); i++ {
+		if cnpj[i] != cnpj[0] {
+			allSame = false
+			break
+		}
+	}
+	if allSame {
 		return false
 	}
 
