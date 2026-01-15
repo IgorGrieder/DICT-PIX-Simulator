@@ -358,13 +358,13 @@ func GenerateValidCPF() string {
 	digits := make([]int, 11)
 
 	// Generate 9 semi-random digits based on timestamp
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		digits[i] = int((now >> (i * 3)) % 10)
 	}
 
 	// Calculate first check digit
 	sum := 0
-	for i := 0; i < 9; i++ {
+	for i := range 9 {
 		sum += digits[i] * (10 - i)
 	}
 	remainder := (sum * 10) % 11
@@ -375,7 +375,7 @@ func GenerateValidCPF() string {
 
 	// Calculate second check digit
 	sum = 0
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		sum += digits[i] * (11 - i)
 	}
 	remainder = (sum * 10) % 11
