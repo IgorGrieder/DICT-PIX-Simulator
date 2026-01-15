@@ -109,7 +109,7 @@ func (r *IdempotencyRepository) Save(ctx context.Context, key string, response a
 		Key:        key,
 		Response:   response,
 		StatusCode: statusCode,
-		CreatedAt:  time.Now(),
+		CreatedAt:  time.Now().UTC(),
 	}
 
 	opts := options.Update().SetUpsert(true)

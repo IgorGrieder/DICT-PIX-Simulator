@@ -5,9 +5,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dict-simulator/go/internal/constants"
 	"github.com/dict-simulator/go/internal/httputil"
 	"github.com/dict-simulator/go/internal/ratelimit"
 )
+
+// IdentifierHeader is the header name for the identifier user
+const IdentifierHeader = "X-Participant-Id"
 
 // responseCapture wraps http.ResponseWriter to capture the status code
 type responseCapture struct {
@@ -46,17 +50,8 @@ func (m *Manager) RateLimiterWithPolicy(policy ratelimit.Policy) func(http.Handl
 				return
 			}
 
-			if m.rateLimiter == nil {
-				// Fail open if bucket not initialized
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			// Get identifier (participant ID from header, fallback to user ID)
-			identifier := r.Header.Get("X-Participant-Id")
-			if identifier == "" {
-				identifier = r.Header.Get("X-User-Id")
-			}
+			// Get identifier
+			identifier := r.Header.Get(IdentifierHeader)
 			if identifier == "" {
 				identifier = "anonymous"
 			}
@@ -66,6 +61,8 @@ func (m *Manager) RateLimiterWithPolicy(policy ratelimit.Policy) func(http.Handl
 			// Pre-check: verify there's capacity in the bucket
 			state, err := m.rateLimiter.Check(ctx, policy, identifier)
 			if err != nil {
+				httputil.WriteAPIError(w, r, constants.ErrRateLimitInternal)
+
 				// Fail open on Redis errors
 				next.ServeHTTP(w, r)
 				return

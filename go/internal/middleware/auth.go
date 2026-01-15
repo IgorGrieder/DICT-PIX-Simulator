@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"github.com/dict-simulator/go/internal/constants"
 	"github.com/dict-simulator/go/internal/httputil"
 )
 
@@ -24,7 +25,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			authorization := r.Header.Get("Authorization")
 
 			if authorization == "" {
-				httputil.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Authorization header is required")
+				httputil.WriteError(w, constants.ErrAuthHeaderRequired)
 				return
 			}
 
@@ -36,13 +37,13 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			})
 
 			if err != nil || !token.Valid {
-				httputil.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired token")
+				httputil.WriteError(w, constants.ErrInvalidToken)
 				return
 			}
 
 			claims, ok := token.Claims.(*JWTClaims)
 			if !ok {
-				httputil.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid token claims")
+				httputil.WriteError(w, constants.ErrInvalidTokenClaims)
 				return
 			}
 
