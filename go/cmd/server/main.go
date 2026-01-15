@@ -22,7 +22,6 @@ func main() {
 	// Load configuration
 	config.Load()
 
-	// 1. Initialize basic logger (stdout only, for early errors before OTEL is ready)
 	if err := logger.Init(config.Env.Environment, nil); err != nil {
 		panic("failed to initialize logger: " + err.Error())
 	}

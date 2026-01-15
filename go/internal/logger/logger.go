@@ -3,7 +3,6 @@ package logger
 import (
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	otellog "go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -68,21 +67,6 @@ func Sync() {
 	if Log != nil {
 		_ = Log.Sync()
 	}
-}
-
-// WithTraceContext returns a logger with trace and span IDs from the given span
-// Note: When using otelzap, trace correlation is handled automatically for OTEL export.
-// This function is still useful for adding trace IDs to stdout logs.
-func WithTraceContext(span trace.Span) *zap.Logger {
-	if span == nil || !span.SpanContext().IsValid() {
-		return Log
-	}
-
-	sc := span.SpanContext()
-	return Log.With(
-		zap.String("trace_id", sc.TraceID().String()),
-		zap.String("span_id", sc.SpanID().String()),
-	)
 }
 
 // Info logs an info message
