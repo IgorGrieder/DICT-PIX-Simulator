@@ -24,9 +24,9 @@ type User struct {
 }
 
 type UserResponse struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
+	ID    string `json:"id" example:"507f1f77bcf86cd799439011"`
+	Email string `json:"email" example:"user@example.com"`
+	Name  string `json:"name" example:"John Doe"`
 }
 
 // UserRepository handles database operations for users

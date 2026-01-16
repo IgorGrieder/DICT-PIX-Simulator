@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	httpSwagger "github.com/swaggo/http-swagger"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dict-simulator/go/internal/config"
@@ -12,11 +13,15 @@ import (
 	"github.com/dict-simulator/go/internal/modules/health"
 	"github.com/dict-simulator/go/internal/ratelimit"
 	"github.com/dict-simulator/go/internal/telemetry"
+
+	// Import generated docs for Swagger
+	_ "github.com/dict-simulator/go/docs"
 )
 
 // spanNames maps route patterns to custom span names (preserving current naming convention)
 var spanNames = map[string]string{
 	"GET /health":                "health",
+	"GET /swagger/":              "swagger",
 	"POST /auth/register":        "auth.register",
 	"POST /auth/login":           "auth.login",
 	"POST /entries":              "entries.create",
@@ -42,6 +47,14 @@ func Setup(
 	// Health and metrics endpoints
 	mux.HandleFunc("GET /health", healthHandler.Health)
 	mux.Handle("GET /metrics", healthHandler.Metrics())
+
+	// Swagger documentation endpoint
+	mux.Handle("GET /swagger/", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"), // The url pointing to API definition
+		httpSwagger.DeepLinking(true),
+		httpSwagger.DocExpansion("none"),
+		httpSwagger.DomID("swagger-ui"),
+	))
 
 	// Auth routes (no auth middleware)
 	mux.HandleFunc("POST /auth/register", authHandler.Register)

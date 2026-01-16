@@ -16,20 +16,20 @@ import (
 
 // RegisterRequest represents the register request body
 type RegisterRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=6"`
-	Name     string `json:"name" validate:"required"`
+	Email    string `json:"email" validate:"required,email" example:"user@example.com"`
+	Password string `json:"password" validate:"required,min=6" example:"password123"`
+	Name     string `json:"name" validate:"required" example:"John Doe"`
 }
 
 // LoginRequest represents the login request body
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Email    string `json:"email" validate:"required,email" example:"user@example.com"`
+	Password string `json:"password" validate:"required" example:"password123"`
 }
 
 // AuthResponse represents the authentication response
 type AuthResponse struct {
-	Token string              `json:"token"`
+	Token string              `json:"token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 	User  models.UserResponse `json:"user"`
 }
 
@@ -48,6 +48,18 @@ func NewHandler(repo *models.UserRepository, jwtSecret string) *Handler {
 }
 
 // Register handles user registration
+//
+//	@Summary		Register a new user
+//	@Description	Create a new user account with email, password, and name. Returns a JWT token on success.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		RegisterRequest									true	"User registration details"
+//	@Success		201		{object}	httputil.APIResponse{data=AuthResponse}		"User registered successfully"
+//	@Failure		400		{object}	httputil.APIResponse							"Invalid request body"
+//	@Failure		409		{object}	httputil.APIResponse							"User already exists"
+//	@Failure		500		{object}	httputil.APIResponse							"Internal server error"
+//	@Router			/auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -96,6 +108,18 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 // Login handles user login
+//
+//	@Summary		User login
+//	@Description	Authenticate a user with email and password. Returns a JWT token on success.
+//	@Tags			auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		LoginRequest								true	"User login credentials"
+//	@Success		200		{object}	httputil.APIResponse{data=AuthResponse}	"Login successful"
+//	@Failure		400		{object}	httputil.APIResponse						"Invalid request body"
+//	@Failure		401		{object}	httputil.APIResponse						"Invalid credentials"
+//	@Failure		500		{object}	httputil.APIResponse						"Internal server error"
+//	@Router			/auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

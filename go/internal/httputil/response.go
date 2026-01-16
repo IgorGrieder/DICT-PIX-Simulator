@@ -16,12 +16,12 @@ const CorrelationIDHeader = "X-Correlation-Id"
 // APIResponse wraps all API responses with DICT-compliant metadata
 // Per DICT spec, responses include ResponseTime and CorrelationId
 type APIResponse struct {
-	ResponseTime  time.Time `json:"responseTime"`
-	CorrelationId string    `json:"correlationId"`
-	Code          string    `json:"code,omitempty"`
+	ResponseTime  time.Time `json:"responseTime" example:"2024-01-15T10:30:00Z"`
+	CorrelationId string    `json:"correlationId" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Code          string    `json:"code,omitempty" example:"ENTRY_CREATED"`
 	Data          any       `json:"data,omitempty"`
-	Error         string    `json:"error,omitempty"`
-	Message       string    `json:"message,omitempty"`
+	Error         string    `json:"error,omitempty" example:"INVALID_REQUEST"`
+	Message       string    `json:"message,omitempty" example:"Request processed successfully"`
 }
 
 // ErrorResponse represents a standard error response (for backwards compatibility)

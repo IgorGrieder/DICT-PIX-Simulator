@@ -35,19 +35,19 @@ type Reason string
 
 // Account represents bank account information
 type Account struct {
-	Participant   string      `bson:"participant" json:"participant" validate:"required,len=8,numeric"`
-	Branch        string      `bson:"branch" json:"branch" validate:"required,len=4,numeric"`
-	AccountNumber string      `bson:"accountNumber" json:"accountNumber" validate:"required"`
-	AccountType   AccountType `bson:"accountType" json:"accountType" validate:"required,oneof=CACC SVGS SLRY"`
+	Participant   string      `bson:"participant" json:"participant" validate:"required,len=8,numeric" example:"12345678"`
+	Branch        string      `bson:"branch" json:"branch" validate:"required,len=4,numeric" example:"0001"`
+	AccountNumber string      `bson:"accountNumber" json:"accountNumber" validate:"required" example:"123456789"`
+	AccountType   AccountType `bson:"accountType" json:"accountType" validate:"required,oneof=CACC SVGS SLRY" example:"CACC"`
 	OpeningDate   time.Time   `bson:"openingDate" json:"openingDate" validate:"required"`
 }
 
 // Owner represents the account owner information
 type Owner struct {
-	Type        OwnerType `bson:"type" json:"type" validate:"required,oneof=NATURAL_PERSON LEGAL_PERSON"`
-	TaxIdNumber string    `bson:"taxIdNumber" json:"taxIdNumber" validate:"required"`
-	Name        string    `bson:"name" json:"name" validate:"required"`
-	TradeName   string    `bson:"tradeName,omitempty" json:"tradeName,omitempty"` // Only for LEGAL_PERSON
+	Type        OwnerType `bson:"type" json:"type" validate:"required,oneof=NATURAL_PERSON LEGAL_PERSON" example:"NATURAL_PERSON"`
+	TaxIdNumber string    `bson:"taxIdNumber" json:"taxIdNumber" validate:"required" example:"12345678901"`
+	Name        string    `bson:"name" json:"name" validate:"required" example:"John Doe"`
+	TradeName   string    `bson:"tradeName,omitempty" json:"tradeName,omitempty" example:"Doe Enterprises"` // Only for LEGAL_PERSON
 }
 
 // UpdateAccount represents partial account updates (no required validations)
@@ -80,8 +80,8 @@ type Entry struct {
 
 // EntryResponse represents the API response for an entry
 type EntryResponse struct {
-	Key              string    `json:"key"`
-	KeyType          KeyType   `json:"keyType"`
+	Key              string    `json:"key" example:"+5511999999999"`
+	KeyType          KeyType   `json:"keyType" example:"PHONE"`
 	Account          Account   `json:"account"`
 	Owner            Owner     `json:"owner"`
 	CreatedAt        time.Time `json:"createdAt"`
@@ -91,36 +91,36 @@ type EntryResponse struct {
 
 // CreateEntryRequest represents the request body for creating an entry
 type CreateEntryRequest struct {
-	Key       string  `json:"key" validate:"required"`
-	KeyType   KeyType `json:"keyType" validate:"required,oneof=CPF CNPJ EMAIL PHONE EVP"`
+	Key       string  `json:"key" validate:"required" example:"+5511999999999"`
+	KeyType   KeyType `json:"keyType" validate:"required,oneof=CPF CNPJ EMAIL PHONE EVP" example:"PHONE"`
 	Account   Account `json:"account" validate:"required"`
 	Owner     Owner   `json:"owner" validate:"required"`
-	Reason    Reason  `json:"reason" validate:"required,oneof=USER_REQUESTED RECONCILIATION"`
-	RequestId string  `json:"requestId" validate:"required,uuid4"`
+	Reason    Reason  `json:"reason" validate:"required,oneof=USER_REQUESTED RECONCILIATION" example:"USER_REQUESTED"`
+	RequestId string  `json:"requestId" validate:"required,uuid4" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 // UpdateEntryRequest represents the request body for updating an entry
 // Per DICT spec: Only account info, name, and trade name can be updated
 // EVP keys cannot be updated
 type UpdateEntryRequest struct {
-	Key     string         `json:"key" validate:"required"`
+	Key     string         `json:"key" validate:"required" example:"+5511999999999"`
 	Account *UpdateAccount `json:"account,omitempty" validate:"omitempty"`
 	Owner   *UpdateOwner   `json:"owner,omitempty" validate:"omitempty"`
-	Reason  Reason         `json:"reason" validate:"required,oneof=USER_REQUESTED BRANCH_TRANSFER RECONCILIATION RFB_VALIDATION"`
+	Reason  Reason         `json:"reason" validate:"required,oneof=USER_REQUESTED BRANCH_TRANSFER RECONCILIATION RFB_VALIDATION" example:"USER_REQUESTED"`
 }
 
 // DeleteEntryRequest represents the request body for deleting an entry
 // Per DICT spec: POST /entries/{Key}/delete with request body
 type DeleteEntryRequest struct {
-	Key         string `json:"key" validate:"required"`
-	Participant string `json:"participant" validate:"required,len=8,numeric"`
-	Reason      Reason `json:"reason" validate:"required,oneof=USER_REQUESTED ACCOUNT_CLOSURE RECONCILIATION FRAUD RFB_VALIDATION"`
+	Key         string `json:"key" validate:"required" example:"+5511999999999"`
+	Participant string `json:"participant" validate:"required,len=8,numeric" example:"12345678"`
+	Reason      Reason `json:"reason" validate:"required,oneof=USER_REQUESTED ACCOUNT_CLOSURE RECONCILIATION FRAUD RFB_VALIDATION" example:"USER_REQUESTED"`
 }
 
 // DeleteEntryResponse represents the response for deleting an entry
 type DeleteEntryResponse struct {
-	Message string `json:"message"`
-	Key     string `json:"key"`
+	Message string `json:"message" example:"Entry deleted successfully"`
+	Key     string `json:"key" example:"+5511999999999"`
 }
 
 // EntryRepository handles database operations for entries

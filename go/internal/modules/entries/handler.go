@@ -23,6 +23,22 @@ func NewHandler(repo *models.EntryRepository) *Handler {
 }
 
 // Create handles creating a new entry
+//
+//	@Summary		Create a new DICT entry
+//	@Description	Register a new Pix key entry in the DICT system. The key must be unique and valid for its type.
+//	@Tags			entries
+//	@Accept			json
+//	@Produce		json
+//	@Param			X-Idempotency-Key	header		string					true	"Idempotency key for request deduplication"
+//	@Param			request				body		models.CreateEntryRequest	true	"Entry creation request"
+//	@Success		201					{object}	httputil.APIResponse{data=models.EntryResponse}	"Entry created successfully"
+//	@Failure		400					{object}	httputil.APIResponse								"Invalid request body or key format"
+//	@Failure		401					{object}	httputil.APIResponse								"Unauthorized"
+//	@Failure		409					{object}	httputil.APIResponse								"Key already exists"
+//	@Failure		429					{object}	httputil.APIResponse								"Rate limit exceeded"
+//	@Failure		500					{object}	httputil.APIResponse								"Internal server error"
+//	@Security		BearerAuth
+//	@Router			/entries [post]
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -72,6 +88,21 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Get handles getting an entry by key
+//
+//	@Summary		Get a DICT entry by key
+//	@Description	Retrieve a Pix key entry from the DICT system using the key value
+//	@Tags			entries
+//	@Accept			json
+//	@Produce		json
+//	@Param			key	path		string	true	"The Pix key to retrieve (CPF, CNPJ, EMAIL, PHONE, or EVP)"
+//	@Success		200	{object}	httputil.APIResponse{data=models.EntryResponse}	"Entry found"
+//	@Failure		400	{object}	httputil.APIResponse								"Key is required"
+//	@Failure		401	{object}	httputil.APIResponse								"Unauthorized"
+//	@Failure		404	{object}	httputil.APIResponse								"Entry not found"
+//	@Failure		429	{object}	httputil.APIResponse								"Rate limit exceeded"
+//	@Failure		500	{object}	httputil.APIResponse								"Internal server error"
+//	@Security		BearerAuth
+//	@Router			/entries/{key} [get]
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
 	if key == "" {
@@ -98,6 +129,23 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // Delete handles deleting an entry by key
 // Per DICT spec: POST /entries/{key}/delete with request body
 // The participant in the request must match the entry's participant
+//
+//	@Summary		Delete a DICT entry
+//	@Description	Delete a Pix key entry from the DICT system. The requesting participant must own the entry.
+//	@Tags			entries
+//	@Accept			json
+//	@Produce		json
+//	@Param			key		path		string						true	"The Pix key to delete"
+//	@Param			request	body		models.DeleteEntryRequest	true	"Delete entry request with participant and reason"
+//	@Success		200		{object}	httputil.APIResponse{data=models.DeleteEntryResponse}	"Entry deleted successfully"
+//	@Failure		400		{object}	httputil.APIResponse										"Invalid request body or key mismatch"
+//	@Failure		401		{object}	httputil.APIResponse										"Unauthorized"
+//	@Failure		403		{object}	httputil.APIResponse										"Forbidden - participant mismatch"
+//	@Failure		404		{object}	httputil.APIResponse										"Entry not found"
+//	@Failure		429		{object}	httputil.APIResponse										"Rate limit exceeded"
+//	@Failure		500		{object}	httputil.APIResponse										"Internal server error"
+//	@Security		BearerAuth
+//	@Router			/entries/{key}/delete [post]
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
 	if key == "" {
@@ -167,6 +215,22 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 // - EVP keys cannot be updated
 // - Only account info, name, and trade name can be updated
 // - Valid reasons: USER_REQUESTED, BRANCH_TRANSFER, RECONCILIATION, RFB_VALIDATION
+//
+//	@Summary		Update a DICT entry
+//	@Description	Update an existing Pix key entry. EVP keys cannot be updated. Only account info, name, and trade name can be modified.
+//	@Tags			entries
+//	@Accept			json
+//	@Produce		json
+//	@Param			key		path		string						true	"The Pix key to update"
+//	@Param			request	body		models.UpdateEntryRequest	true	"Update entry request"
+//	@Success		200		{object}	httputil.APIResponse{data=models.EntryResponse}	"Entry updated successfully"
+//	@Failure		400		{object}	httputil.APIResponse								"Invalid request body, key mismatch, or EVP key update attempt"
+//	@Failure		401		{object}	httputil.APIResponse								"Unauthorized"
+//	@Failure		404		{object}	httputil.APIResponse								"Entry not found"
+//	@Failure		429		{object}	httputil.APIResponse								"Rate limit exceeded"
+//	@Failure		500		{object}	httputil.APIResponse								"Internal server error"
+//	@Security		BearerAuth
+//	@Router			/entries/{key} [put]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	key := r.PathValue("key")
 	if key == "" {
