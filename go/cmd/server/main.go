@@ -1,3 +1,37 @@
+// DICT Simulator API
+//
+// A simulated implementation of the Brazilian Central Bank's DICT (Diretório de Identificadores de Contas Transacionais)
+// API for managing Pix keys. This API allows you to register, query, update, and delete Pix key entries.
+//
+//	@title						DICT Simulator API
+//	@version					1.0.0
+//	@description				A simulated implementation of the Brazilian Central Bank's DICT API for managing Pix keys.
+//	@termsOfService				http://swagger.io/terms/
+//
+//	@contact.name				API Support
+//	@contact.email				support@dict-simulator.io
+//
+//	@license.name				MIT
+//	@license.url				https://opensource.org/licenses/MIT
+//
+//	@host						localhost:8080
+//	@BasePath					/
+//	@schemes					http https
+//
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				JWT Bearer token. Format: "Bearer {token}"
+//
+//	@tag.name					health
+//	@tag.description			Health check endpoints
+//
+//	@tag.name					auth
+//	@tag.description			Authentication endpoints for user registration and login
+//
+//	@tag.name					entries
+//	@tag.description			DICT entry management for Pix keys
+
 package main
 
 import (
