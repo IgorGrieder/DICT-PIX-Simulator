@@ -1,0 +1,621 @@
+basePath: /
+definitions:
+  github_com_dict-simulator_go_internal_httputil.APIResponse:
+    properties:
+      code:
+        example: ENTRY_CREATED
+        type: string
+      correlationId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      data: {}
+      error:
+        example: INVALID_REQUEST
+        type: string
+      message:
+        example: Request processed successfully
+        type: string
+      responseTime:
+        example: "2024-01-15T10:30:00Z"
+        type: string
+    type: object
+  github_com_dict-simulator_go_internal_models.Account:
+    properties:
+      accountNumber:
+        example: "123456789"
+        type: string
+      accountType:
+        enum:
+        - CACC
+        - SVGS
+        - SLRY
+        example: CACC
+        type: string
+      branch:
+        example: "0001"
+        type: string
+      openingDate:
+        type: string
+      participant:
+        example: "12345678"
+        type: string
+    required:
+    - accountNumber
+    - accountType
+    - branch
+    - openingDate
+    - participant
+    type: object
+  github_com_dict-simulator_go_internal_models.CreateEntryRequest:
+    properties:
+      account:
+        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.Account'
+      key:
+        example: "+5511999999999"
+        type: string
+      keyType:
+        allOf:
+        - $ref: '#/definitions/github_com_dict-simulator_go_internal_models.KeyType'
+        enum:
+        - CPF
+        - CNPJ
+        - EMAIL
+        - PHONE
+        - EVP
+        example: PHONE
+      owner:
+        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.Owner'
+      reason:
+        enum:
+        - USER_REQUESTED
+        - RECONCILIATION
+        example: USER_REQUESTED
+        type: string
+      requestId:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - account
+    - key
+    - keyType
+    - owner
+    - reason
+    - requestId
+    type: object
+  github_com_dict-simulator_go_internal_models.DeleteEntryRequest:
+    properties:
+      key:
+        example: "+5511999999999"
+        type: string
+      participant:
+        example: "12345678"
+        type: string
+      reason:
+        enum:
+        - USER_REQUESTED
+        - ACCOUNT_CLOSURE
+        - RECONCILIATION
+        - FRAUD
+        - RFB_VALIDATION
+        example: USER_REQUESTED
+        type: string
+    required:
+    - key
+    - participant
+    - reason
+    type: object
+  github_com_dict-simulator_go_internal_models.DeleteEntryResponse:
+    properties:
+      key:
+        example: "+5511999999999"
+        type: string
+      message:
+        example: Entry deleted successfully
+        type: string
+    type: object
+  github_com_dict-simulator_go_internal_models.EntryResponse:
+    properties:
+      account:
+        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.Account'
+      createdAt:
+        type: string
+      key:
+        example: "+5511999999999"
+        type: string
+      keyOwnershipDate:
+        type: string
+      keyType:
+        allOf:
+        - $ref: '#/definitions/github_com_dict-simulator_go_internal_models.KeyType'
+        example: PHONE
+      owner:
+        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.Owner'
+      updatedAt:
+        type: string
+    type: object
+  github_com_dict-simulator_go_internal_models.KeyType:
+    enum:
+    - CPF
+    - CNPJ
+    - EMAIL
+    - PHONE
+    - EVP
+    type: string
+    x-enum-varnames:
+    - KeyTypeCPF
+    - KeyTypeCNPJ
+    - KeyTypeEMAIL
+    - KeyTypePHONE
+    - KeyTypeEVP
+  github_com_dict-simulator_go_internal_models.Owner:
+    properties:
+      name:
+        example: John Doe
+        type: string
+      taxIdNumber:
+        example: "12345678901"
+        type: string
+      tradeName:
+        description: Only for LEGAL_PERSON
+        example: Doe Enterprises
+        type: string
+      type:
+        enum:
+        - NATURAL_PERSON
+        - LEGAL_PERSON
+        example: NATURAL_PERSON
+        type: string
+    required:
+    - name
+    - taxIdNumber
+    - type
+    type: object
+  github_com_dict-simulator_go_internal_models.UpdateAccount:
+    properties:
+      accountNumber:
+        type: string
+      accountType:
+        enum:
+        - CACC
+        - SVGS
+        - SLRY
+        type: string
+      branch:
+        type: string
+      openingDate:
+        type: string
+      participant:
+        type: string
+    type: object
+  github_com_dict-simulator_go_internal_models.UpdateEntryRequest:
+    properties:
+      account:
+        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.UpdateAccount'
+      key:
+        example: "+5511999999999"
+        type: string
+      owner:
+        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.UpdateOwner'
+      reason:
+        enum:
+        - USER_REQUESTED
+        - BRANCH_TRANSFER
+        - RECONCILIATION
+        - RFB_VALIDATION
+        example: USER_REQUESTED
+        type: string
+    required:
+    - key
+    - reason
+    type: object
+  github_com_dict-simulator_go_internal_models.UpdateOwner:
+    properties:
+      name:
+        type: string
+      tradeName:
+        type: string
+    type: object
+  github_com_dict-simulator_go_internal_models.UserResponse:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      id:
+        example: 507f1f77bcf86cd799439011
+        type: string
+      name:
+        example: John Doe
+        type: string
+    type: object
+  internal_modules_auth.AuthResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.UserResponse'
+    type: object
+  internal_modules_auth.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_modules_auth.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      name:
+        example: John Doe
+        type: string
+      password:
+        example: password123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  internal_modules_health.HealthResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: "2024-01-15T10:30:00Z"
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@dict-simulator.io
+    name: API Support
+  description: A simulated implementation of the Brazilian Central Bank's DICT API
+    for managing Pix keys.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: DICT Simulator API
+  version: 1.0.0
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate a user with email and password. Returns a JWT token
+        on success.
+      parameters:
+      - description: User login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_modules_auth.AuthResponse'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "401":
+          description: Invalid credentials
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+      summary: User login
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account with email, password, and name. Returns
+        a JWT token on success.
+      parameters:
+      - description: User registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_modules_auth.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User registered successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_modules_auth.AuthResponse'
+              type: object
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "409":
+          description: User already exists
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /entries:
+    post:
+      consumes:
+      - application/json
+      description: Register a new Pix key entry in the DICT system. The key must be
+        unique and valid for its type.
+      parameters:
+      - description: Idempotency key for request deduplication
+        in: header
+        name: X-Idempotency-Key
+        required: true
+        type: string
+      - description: Entry creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_dict-simulator_go_internal_models.CreateEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Entry created successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse'
+              type: object
+        "400":
+          description: Invalid request body or key format
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "409":
+          description: Key already exists
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "429":
+          description: Rate limit exceeded
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new DICT entry
+      tags:
+      - entries
+  /entries/{key}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a Pix key entry from the DICT system using the key value
+      parameters:
+      - description: The Pix key to retrieve (CPF, CNPJ, EMAIL, PHONE, or EVP)
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Entry found
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse'
+              type: object
+        "400":
+          description: Key is required
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "404":
+          description: Entry not found
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "429":
+          description: Rate limit exceeded
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a DICT entry by key
+      tags:
+      - entries
+    put:
+      consumes:
+      - application/json
+      description: Update an existing Pix key entry. EVP keys cannot be updated. Only
+        account info, name, and trade name can be modified.
+      parameters:
+      - description: The Pix key to update
+        in: path
+        name: key
+        required: true
+        type: string
+      - description: Update entry request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_dict-simulator_go_internal_models.UpdateEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Entry updated successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse'
+              type: object
+        "400":
+          description: Invalid request body, key mismatch, or EVP key update attempt
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "404":
+          description: Entry not found
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "429":
+          description: Rate limit exceeded
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a DICT entry
+      tags:
+      - entries
+  /entries/{key}/delete:
+    post:
+      consumes:
+      - application/json
+      description: Delete a Pix key entry from the DICT system. The requesting participant
+        must own the entry.
+      parameters:
+      - description: The Pix key to delete
+        in: path
+        name: key
+        required: true
+        type: string
+      - description: Delete entry request with participant and reason
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_dict-simulator_go_internal_models.DeleteEntryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Entry deleted successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_dict-simulator_go_internal_models.DeleteEntryResponse'
+              type: object
+        "400":
+          description: Invalid request body or key mismatch
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "403":
+          description: Forbidden - participant mismatch
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "404":
+          description: Entry not found
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "429":
+          description: Rate limit exceeded
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a DICT entry
+      tags:
+      - entries
+  /health:
+    get:
+      description: Returns the health status of the service
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service is healthy
+          schema:
+            $ref: '#/definitions/internal_modules_health.HealthResponse'
+      summary: Health check
+      tags:
+      - health
+  /metrics:
+    get:
+      description: Returns Prometheus metrics for monitoring
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Prometheus metrics in text format
+          schema:
+            type: string
+      summary: Prometheus metrics
+      tags:
+      - health
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT Bearer token. Format: "Bearer {token}"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

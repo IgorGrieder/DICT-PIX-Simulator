@@ -1,0 +1,931 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "A simulated implementation of the Brazilian Central Bank's DICT API for managing Pix keys.",
+        "title": "DICT Simulator API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "email": "support@dict-simulator.io"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "Authenticate a user with email and password. Returns a JWT token on success.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "User login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_auth.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_modules_auth.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Create a new user account with email, password, and name. Returns a JWT token on success.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "User registration details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_auth.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "User registered successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/internal_modules_auth.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "User already exists",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/entries": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Register a new Pix key entry in the DICT system. The key must be unique and valid for its type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "entries"
+                ],
+                "summary": "Create a new DICT entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Idempotency key for request deduplication",
+                        "name": "X-Idempotency-Key",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "Entry creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.CreateEntryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Entry created successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or key format",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Key already exists",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/entries/{key}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a Pix key entry from the DICT system using the key value",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "entries"
+                ],
+                "summary": "Get a DICT entry by key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The Pix key to retrieve (CPF, CNPJ, EMAIL, PHONE, or EVP)",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Entry found",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Key is required",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Entry not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing Pix key entry. EVP keys cannot be updated. Only account info, name, and trade name can be modified.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "entries"
+                ],
+                "summary": "Update a DICT entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The Pix key to update",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update entry request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.UpdateEntryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Entry updated successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body, key mismatch, or EVP key update attempt",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Entry not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/entries/{key}/delete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a Pix key entry from the DICT system. The requesting participant must own the entry.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "entries"
+                ],
+                "summary": "Delete a DICT entry",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The Pix key to delete",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Delete entry request with participant and reason",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.DeleteEntryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Entry deleted successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.DeleteEntryResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or key mismatch",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - participant mismatch",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Entry not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Returns the health status of the service",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "Service is healthy",
+                        "schema": {
+                            "$ref": "#/definitions/internal_modules_health.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/metrics": {
+            "get": {
+                "description": "Returns Prometheus metrics for monitoring",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Prometheus metrics",
+                "responses": {
+                    "200": {
+                        "description": "Prometheus metrics in text format",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_dict-simulator_go_internal_httputil.APIResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "ENTRY_CREATED"
+                },
+                "correlationId": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "data": {},
+                "error": {
+                    "type": "string",
+                    "example": "INVALID_REQUEST"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Request processed successfully"
+                },
+                "responseTime": {
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.Account": {
+            "type": "object",
+            "required": [
+                "accountNumber",
+                "accountType",
+                "branch",
+                "openingDate",
+                "participant"
+            ],
+            "properties": {
+                "accountNumber": {
+                    "type": "string",
+                    "example": "123456789"
+                },
+                "accountType": {
+                    "type": "string",
+                    "enum": [
+                        "CACC",
+                        "SVGS",
+                        "SLRY"
+                    ],
+                    "example": "CACC"
+                },
+                "branch": {
+                    "type": "string",
+                    "example": "0001"
+                },
+                "openingDate": {
+                    "type": "string"
+                },
+                "participant": {
+                    "type": "string",
+                    "example": "12345678"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.CreateEntryRequest": {
+            "type": "object",
+            "required": [
+                "account",
+                "key",
+                "keyType",
+                "owner",
+                "reason",
+                "requestId"
+            ],
+            "properties": {
+                "account": {
+                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.Account"
+                },
+                "key": {
+                    "type": "string",
+                    "example": "+5511999999999"
+                },
+                "keyType": {
+                    "enum": [
+                        "CPF",
+                        "CNPJ",
+                        "EMAIL",
+                        "PHONE",
+                        "EVP"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.KeyType"
+                        }
+                    ],
+                    "example": "PHONE"
+                },
+                "owner": {
+                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.Owner"
+                },
+                "reason": {
+                    "type": "string",
+                    "enum": [
+                        "USER_REQUESTED",
+                        "RECONCILIATION"
+                    ],
+                    "example": "USER_REQUESTED"
+                },
+                "requestId": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.DeleteEntryRequest": {
+            "type": "object",
+            "required": [
+                "key",
+                "participant",
+                "reason"
+            ],
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "example": "+5511999999999"
+                },
+                "participant": {
+                    "type": "string",
+                    "example": "12345678"
+                },
+                "reason": {
+                    "type": "string",
+                    "enum": [
+                        "USER_REQUESTED",
+                        "ACCOUNT_CLOSURE",
+                        "RECONCILIATION",
+                        "FRAUD",
+                        "RFB_VALIDATION"
+                    ],
+                    "example": "USER_REQUESTED"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.DeleteEntryResponse": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "example": "+5511999999999"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Entry deleted successfully"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.EntryResponse": {
+            "type": "object",
+            "properties": {
+                "account": {
+                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.Account"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string",
+                    "example": "+5511999999999"
+                },
+                "keyOwnershipDate": {
+                    "type": "string"
+                },
+                "keyType": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.KeyType"
+                        }
+                    ],
+                    "example": "PHONE"
+                },
+                "owner": {
+                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.Owner"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.KeyType": {
+            "type": "string",
+            "enum": [
+                "CPF",
+                "CNPJ",
+                "EMAIL",
+                "PHONE",
+                "EVP"
+            ],
+            "x-enum-varnames": [
+                "KeyTypeCPF",
+                "KeyTypeCNPJ",
+                "KeyTypeEMAIL",
+                "KeyTypePHONE",
+                "KeyTypeEVP"
+            ]
+        },
+        "github_com_dict-simulator_go_internal_models.Owner": {
+            "type": "object",
+            "required": [
+                "name",
+                "taxIdNumber",
+                "type"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "taxIdNumber": {
+                    "type": "string",
+                    "example": "12345678901"
+                },
+                "tradeName": {
+                    "description": "Only for LEGAL_PERSON",
+                    "type": "string",
+                    "example": "Doe Enterprises"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "NATURAL_PERSON",
+                        "LEGAL_PERSON"
+                    ],
+                    "example": "NATURAL_PERSON"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.UpdateAccount": {
+            "type": "object",
+            "properties": {
+                "accountNumber": {
+                    "type": "string"
+                },
+                "accountType": {
+                    "type": "string",
+                    "enum": [
+                        "CACC",
+                        "SVGS",
+                        "SLRY"
+                    ]
+                },
+                "branch": {
+                    "type": "string"
+                },
+                "openingDate": {
+                    "type": "string"
+                },
+                "participant": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.UpdateEntryRequest": {
+            "type": "object",
+            "required": [
+                "key",
+                "reason"
+            ],
+            "properties": {
+                "account": {
+                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.UpdateAccount"
+                },
+                "key": {
+                    "type": "string",
+                    "example": "+5511999999999"
+                },
+                "owner": {
+                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.UpdateOwner"
+                },
+                "reason": {
+                    "type": "string",
+                    "enum": [
+                        "USER_REQUESTED",
+                        "BRANCH_TRANSFER",
+                        "RECONCILIATION",
+                        "RFB_VALIDATION"
+                    ],
+                    "example": "USER_REQUESTED"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.UpdateOwner": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "tradeName": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_dict-simulator_go_internal_models.UserResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "507f1f77bcf86cd799439011"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                }
+            }
+        },
+        "internal_modules_auth.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "user": {
+                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.UserResponse"
+                }
+            }
+        },
+        "internal_modules_auth.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "password123"
+                }
+            }
+        },
+        "internal_modules_auth.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "password123"
+                }
+            }
+        },
+        "internal_modules_health.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "JWT Bearer token. Format: \"Bearer {token}\"",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
