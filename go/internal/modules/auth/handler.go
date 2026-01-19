@@ -166,20 +166,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Me handles getting current user
-func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
-	userID := r.Header.Get("X-User-Id")
-	if userID == "" {
-		httputil.WriteAPIError(w, r, constants.ErrUnauthorized)
-		return
-	}
-
-	// For now, we just return the ID as we don't have FindByID yet
-	httputil.WriteAPISuccess(w, r, constants.SuccessUserFound, map[string]string{
-		"id": userID,
-	})
-}
-
 func (h *Handler) generateToken(user *models.User) (string, error) {
 	claims := middleware.JWTClaims{
 		UserID: user.ID.Hex(),
