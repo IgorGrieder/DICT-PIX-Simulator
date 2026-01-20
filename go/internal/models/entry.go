@@ -52,18 +52,18 @@ type Owner struct {
 
 // UpdateAccount represents partial account updates (no required validations)
 type UpdateAccount struct {
-	Participant   string      `bson:"participant,omitempty" json:"participant,omitempty" validate:"omitempty,len=8,numeric"`
-	Branch        string      `bson:"branch,omitempty" json:"branch,omitempty" validate:"omitempty,len=4,numeric"`
-	AccountNumber string      `bson:"accountNumber,omitempty" json:"accountNumber,omitempty"`
-	AccountType   AccountType `bson:"accountType,omitempty" json:"accountType,omitempty" validate:"omitempty,oneof=CACC SVGS SLRY"`
-	OpeningDate   *time.Time  `bson:"openingDate,omitempty" json:"openingDate,omitempty"`
+	Participant   string      `bson:"participant,omitempty" json:"participant,omitempty" validate:"omitempty,len=8,numeric" example:"12345678"`
+	Branch        string      `bson:"branch,omitempty" json:"branch,omitempty" validate:"omitempty,len=4,numeric" example:"0001"`
+	AccountNumber string      `bson:"accountNumber,omitempty" json:"accountNumber,omitempty" example:"123456789"`
+	AccountType   AccountType `bson:"accountType,omitempty" json:"accountType,omitempty" validate:"omitempty,oneof=CACC SVGS SLRY" example:"CACC"`
+	OpeningDate   *time.Time  `bson:"openingDate,omitempty" json:"openingDate,omitempty" example:"2024-01-15T00:00:00Z"`
 }
 
 // UpdateOwner represents partial owner updates (no required validations)
 // Per DICT spec: Only name and trade name can be updated
 type UpdateOwner struct {
-	Name      string `bson:"name,omitempty" json:"name,omitempty"`
-	TradeName string `bson:"tradeName,omitempty" json:"tradeName,omitempty"`
+	Name      string `bson:"name,omitempty" json:"name,omitempty" example:"John Doe"`
+	TradeName string `bson:"tradeName,omitempty" json:"tradeName,omitempty" example:"Doe Enterprises"`
 }
 
 // Entry represents a DICT entry (Pix key registration)

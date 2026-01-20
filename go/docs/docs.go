@@ -844,7 +844,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "accountNumber": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123456789"
                 },
                 "accountType": {
                     "type": "string",
@@ -852,16 +853,20 @@ const docTemplate = `{
                         "CACC",
                         "SVGS",
                         "SLRY"
-                    ]
+                    ],
+                    "example": "CACC"
                 },
                 "branch": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "0001"
                 },
                 "openingDate": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-01-15T00:00:00Z"
                 },
                 "participant": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "12345678"
                 }
             }
         },
@@ -898,10 +903,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "John Doe"
                 },
                 "tradeName": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Doe Enterprises"
                 }
             }
         },

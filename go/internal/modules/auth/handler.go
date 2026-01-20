@@ -81,6 +81,12 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
+		span.SetStatus(codes.Error, "Validation failed")
+		span.SetAttributes(
+			attribute.String("error.type", "validation"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
 		return
 	}
@@ -88,11 +94,22 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Check if user already exists
 	existingUser, err := h.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to check user")
+		span.SetAttributes(
+			attribute.String("error.type", "repository"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToCheckUser)
 		return
 	}
 
 	if existingUser != nil {
+		span.SetStatus(codes.Error, "User already exists")
+		span.SetAttributes(
+			attribute.String("error.type", "conflict"),
+			attribute.String("error.message", "User with this email already exists"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrUserAlreadyExists)
 		return
 	}
@@ -100,6 +117,12 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Create user
 	user, err := h.repo.Create(ctx, req.Email, req.Password, req.Name)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to create user")
+		span.SetAttributes(
+			attribute.String("error.type", "repository"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToCreateUser)
 		return
 	}
@@ -107,6 +130,12 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT
 	token, err := h.generateToken(user)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to generate token")
+		span.SetAttributes(
+			attribute.String("error.type", "token_generation"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToGenerateToken)
 		return
 	}
@@ -148,6 +177,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
+		span.SetStatus(codes.Error, "Validation failed")
+		span.SetAttributes(
+			attribute.String("error.type", "validation"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
 		return
 	}
@@ -155,17 +190,33 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	// Find user
 	user, err := h.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to find user")
+		span.SetAttributes(
+			attribute.String("error.type", "repository"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToFindUser)
 		return
 	}
 
 	if user == nil {
+		span.SetStatus(codes.Error, "Invalid credentials")
+		span.SetAttributes(
+			attribute.String("error.type", "authentication"),
+			attribute.String("error.message", "User not found"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrInvalidCredentials)
 		return
 	}
 
 	// Check password
 	if !user.CheckPassword(req.Password) {
+		span.SetStatus(codes.Error, "Invalid credentials")
+		span.SetAttributes(
+			attribute.String("error.type", "authentication"),
+			attribute.String("error.message", "Invalid password"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrInvalidCredentials)
 		return
 	}
@@ -173,6 +224,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT
 	token, err := h.generateToken(user)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to generate token")
+		span.SetAttributes(
+			attribute.String("error.type", "token_generation"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToGenerateToken)
 		return
 	}

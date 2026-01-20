@@ -199,6 +199,12 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
+		span.SetStatus(codes.Error, "Validation failed")
+		span.SetAttributes(
+			attribute.String("error.type", "validation"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
 		return
 	}
@@ -206,17 +212,33 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	// Check if entry exists and validate participant
 	existing, err := h.repo.FindByKey(ctx, key)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to find entry")
+		span.SetAttributes(
+			attribute.String("error.type", "repository"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToFindEntry)
 		return
 	}
 
 	if existing == nil {
+		span.SetStatus(codes.Error, "Entry not found")
+		span.SetAttributes(
+			attribute.String("error.type", "not_found"),
+			attribute.String("error.message", "Entry does not exist"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
 		return
 	}
 
 	// Verify participant matches the entry's participant (authorization check)
 	if existing.Account.Participant != req.Participant {
+		span.SetStatus(codes.Error, "Forbidden participant")
+		span.SetAttributes(
+			attribute.String("error.type", "forbidden"),
+			attribute.String("error.message", "Participant mismatch"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrForbiddenParticipant)
 		return
 	}
@@ -224,11 +246,22 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	// Delete the entry
 	entry, err := h.repo.DeleteByKey(ctx, key)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to delete entry")
+		span.SetAttributes(
+			attribute.String("error.type", "repository"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToDeleteEntry)
 		return
 	}
 
 	if entry == nil {
+		span.SetStatus(codes.Error, "Entry not found after delete")
+		span.SetAttributes(
+			attribute.String("error.type", "not_found"),
+			attribute.String("error.message", "Entry not found after delete"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
 		return
 	}
@@ -291,6 +324,12 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
+		span.SetStatus(codes.Error, "Validation failed")
+		span.SetAttributes(
+			attribute.String("error.type", "validation"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
 		return
 	}
@@ -298,17 +337,33 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	// Check if entry exists
 	existing, err := h.repo.FindByKey(ctx, key)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to find entry")
+		span.SetAttributes(
+			attribute.String("error.type", "repository"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToFindEntry)
 		return
 	}
 
 	if existing == nil {
+		span.SetStatus(codes.Error, "Entry not found")
+		span.SetAttributes(
+			attribute.String("error.type", "not_found"),
+			attribute.String("error.message", "Entry does not exist"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
 		return
 	}
 
 	// EVP keys cannot be updated per DICT spec
 	if existing.KeyType == models.KeyTypeEVP {
+		span.SetStatus(codes.Error, "EVP key not updatable")
+		span.SetAttributes(
+			attribute.String("error.type", "evp_not_updatable"),
+			attribute.String("error.message", "EVP keys cannot be updated"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrEVPKeyNotUpdatable)
 		return
 	}
@@ -316,11 +371,22 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	// Update the entry
 	entry, err := h.repo.UpdateByKey(ctx, key, &req)
 	if err != nil {
+		span.SetStatus(codes.Error, "Failed to update entry")
+		span.SetAttributes(
+			attribute.String("error.type", "repository"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrFailedToUpdateEntry)
 		return
 	}
 
 	if entry == nil {
+		span.SetStatus(codes.Error, "Entry not found after update")
+		span.SetAttributes(
+			attribute.String("error.type", "not_found"),
+			attribute.String("error.message", "Entry not found after update"),
+		)
 		httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
 		return
 	}

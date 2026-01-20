@@ -220,18 +220,23 @@ definitions:
   models.UpdateAccount:
     properties:
       accountNumber:
+        example: "123456789"
         type: string
       accountType:
         enum:
         - CACC
         - SVGS
         - SLRY
+        example: CACC
         type: string
       branch:
+        example: "0001"
         type: string
       openingDate:
+        example: "2024-01-15T00:00:00Z"
         type: string
       participant:
+        example: "12345678"
         type: string
     type: object
   models.UpdateEntryRequest:
@@ -258,8 +263,10 @@ definitions:
   models.UpdateOwner:
     properties:
       name:
+        example: John Doe
         type: string
       tradeName:
+        example: Doe Enterprises
         type: string
     type: object
   models.UserResponse:
