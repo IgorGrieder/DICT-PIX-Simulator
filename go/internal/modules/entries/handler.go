@@ -169,6 +169,9 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Router			/entries/{key}/delete [post]
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	span := trace.SpanFromContext(ctx)
+
 	key := r.PathValue("key")
 	if key == "" {
 		httputil.WriteAPIError(w, r, constants.ErrKeyRequired)
@@ -177,7 +180,13 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	var req models.DeleteEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
+		span.SetStatus(codes.Error, "JSON decode failed")
+		span.SetAttributes(
+			attribute.String("error.type", "json_decode"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage("JSON decode error: "+err.Error()))
 		return
 	}
 
@@ -193,8 +202,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage(err.Error()))
 		return
 	}
-
-	ctx := r.Context()
 
 	// Check if entry exists and validate participant
 	existing, err := h.repo.FindByKey(ctx, key)
@@ -254,6 +261,9 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 //	@Security		BearerAuth
 //	@Router			/entries/{key} [put]
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	span := trace.SpanFromContext(ctx)
+
 	key := r.PathValue("key")
 	if key == "" {
 		httputil.WriteAPIError(w, r, constants.ErrKeyRequired)
@@ -262,7 +272,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req models.UpdateEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
+		span.SetStatus(codes.Error, "JSON decode failed")
+		span.SetAttributes(
+			attribute.String("error.type", "json_decode"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage("JSON decode error: "+err.Error()))
 		return
 	}
 
@@ -278,8 +294,6 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage(err.Error()))
 		return
 	}
-
-	ctx := r.Context()
 
 	// Check if entry exists
 	existing, err := h.repo.FindByKey(ctx, key)

@@ -6,6 +6,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/dict-simulator/go/internal/constants"
 	"github.com/dict-simulator/go/internal/httputil"
@@ -61,9 +64,18 @@ func NewHandler(repo *models.UserRepository, jwtSecret string) *Handler {
 //	@Failure		500		{object}	httputil.APIResponse							"Internal server error"
 //	@Router			/auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	span := trace.SpanFromContext(ctx)
+
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
+		span.SetStatus(codes.Error, "JSON decode failed")
+		span.SetAttributes(
+			attribute.String("error.type", "json_decode"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage("JSON decode error: "+err.Error()))
 		return
 	}
 
@@ -72,8 +84,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage(err.Error()))
 		return
 	}
-
-	ctx := r.Context()
 
 	// Check if user already exists
 	existingUser, err := h.repo.FindByEmail(ctx, req.Email)
@@ -121,9 +131,18 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500		{object}	httputil.APIResponse						"Internal server error"
 //	@Router			/auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	span := trace.SpanFromContext(ctx)
+
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
+		span.SetStatus(codes.Error, "JSON decode failed")
+		span.SetAttributes(
+			attribute.String("error.type", "json_decode"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage("JSON decode error: "+err.Error()))
 		return
 	}
 
@@ -132,8 +151,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage(err.Error()))
 		return
 	}
-
-	ctx := r.Context()
 
 	// Find user
 	user, err := h.repo.FindByEmail(ctx, req.Email)
