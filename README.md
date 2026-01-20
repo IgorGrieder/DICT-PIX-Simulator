@@ -151,13 +151,13 @@ All API responses follow a consistent DICT-compliant format:
 }
 ```
 
-| Field | Description |
-|-------|-------------|
-| `responseTime` | ISO 8601 timestamp of when the response was generated |
+| Field           | Description                                                            |
+| --------------- | ---------------------------------------------------------------------- |
+| `responseTime`  | ISO 8601 timestamp of when the response was generated                  |
 | `correlationId` | UUID from `X-Correlation-Id` header, or auto-generated if not provided |
-| `data` | The actual response payload |
-| `error` | Error code (only on errors) |
-| `message` | Human-readable error message (only on errors) |
+| `data`          | The actual response payload                                            |
+| `error`         | Error code (only on errors)                                            |
+| `message`       | Human-readable error message (only on errors)                          |
 
 ### Correlation ID
 
@@ -178,54 +178,6 @@ curl http://localhost:3000/entries/12345678909 \
 | EMAIL | RFC 5322       | Regex (max 77 chars)      |
 | PHONE | +55XXXXXXXXXXX | +55 prefix + 10-11 digits |
 | EVP   | UUID v4        | UUID format               |
-
-## Project Structure
-
-```
-go/
-├── cmd/
-│   └── server/
-│       └── main.go             # Entry point with HTTP router
-├── internal/
-│   ├── config/
-│   │   └── env.go              # Environment configuration
-│   ├── db/
-│   │   ├── mongo.go            # MongoDB connection
-│   │   └── redis.go            # Redis connection
-│   ├── httputil/
-│   │   └── response.go         # API response helpers (ResponseTime, CorrelationId)
-│   ├── integration/
-│   │   ├── setup_test.go       # TestMain with testcontainers
-│   │   └── entries_test.go     # Integration tests
-│   ├── middleware/
-│   │   ├── auth.go             # JWT authentication
-│   │   ├── rate_limiter.go     # Rate limiting
-│   │   └── idempotency.go      # Idempotency support
-│   ├── models/
-│   │   ├── user.go             # User model
-│   │   ├── entry.go            # Entry model (with OpeningDate, KeyOwnershipDate)
-│   │   └── idempotency.go      # Idempotency record
-│   ├── ratelimit/
-│   │   ├── bucket.go           # Token bucket algorithm
-│   │   └── policy.go           # Rate limit policies
-│   ├── router/
-│   │   └── router.go           # HTTP router setup
-│   └── modules/
-│       ├── auth/
-│       │   └── handler.go      # Auth handlers
-│       └── entries/
-│           ├── handler.go      # Entry handlers (DICT-compliant)
-│           └── validator.go    # Key validation (CPF, CNPJ, Email, Phone, EVP)
-├── k6/
-│   ├── entries.test.js         # CRUD load tests
-│   ├── idempotency.test.js     # Idempotency tests
-│   └── stress.test.js          # Stress tests
-├── Dockerfile
-├── docker-compose.yml
-├── go.mod
-├── go.sum
-└── .env.example
-```
 
 ## Data Modeling
 
@@ -331,15 +283,15 @@ sequenceDiagram
 
 ## Environment Variables
 
-| Variable                    | Default                         | Description                  |
-| --------------------------- | ------------------------------- | ---------------------------- |
-| PORT                        | 3000                            | Server port                  |
-| MONGODB_URI                 | mongodb://localhost:27017/dict  | MongoDB connection string    |
-| REDIS_URI                   | redis://localhost:6379          | Redis connection string      |
-| JWT_SECRET                  | (required)                      | Secret key for JWT signing   |
-| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4318/v1/traces | OpenTelemetry Traces endpoint       |
-| RATE_LIMIT_BUCKET_SIZE      | 60                              | Max requests per window      |
-| RATE_LIMIT_REFILL_SECONDS   | 60                              | Rate limit window in seconds |
+| Variable                    | Default                         | Description                   |
+| --------------------------- | ------------------------------- | ----------------------------- |
+| PORT                        | 3000                            | Server port                   |
+| MONGODB_URI                 | mongodb://localhost:27017/dict  | MongoDB connection string     |
+| REDIS_URI                   | redis://localhost:6379          | Redis connection string       |
+| JWT_SECRET                  | (required)                      | Secret key for JWT signing    |
+| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4318/v1/traces | OpenTelemetry Traces endpoint |
+| RATE_LIMIT_BUCKET_SIZE      | 60                              | Max requests per window       |
+| RATE_LIMIT_REFILL_SECONDS   | 60                              | Rate limit window in seconds  |
 
 ## Development
 
