@@ -69,7 +69,48 @@ export const options = {
 	},
 };
 
-export default function () {
+export function setup() {
+	// Authentication
+	// Create a unique user for this test run
+	const userCpf = generateValidCPF();
+	const userEmail = `entries_test_${randomString(5)}@test.com`;
+	const userPayload = JSON.stringify({
+		name: `Entries Test User`,
+		email: userEmail,
+		password: "securepassword123",
+		cpf: userCpf,
+	});
+
+	// Register
+	const registerRes = http.post(`${BASE_URL}/auth/register`, userPayload, {
+		headers: { "Content-Type": "application/json" },
+	});
+
+	if (registerRes.status !== 201) {
+		console.log(`Registration response: ${registerRes.body}`);
+	}
+
+	// Login
+	const loginRes = http.post(
+		`${BASE_URL}/auth/login`,
+		JSON.stringify({
+			email: userEmail,
+			password: "securepassword123",
+		}),
+		{
+			headers: { "Content-Type": "application/json" },
+		},
+	);
+
+	if (loginRes.status !== 200) {
+		throw new Error(`Login failed: ${loginRes.status} ${loginRes.body}`);
+	}
+
+	const token = JSON.parse(loginRes.body).data.token;
+	return { token: token };
+}
+
+export default function (data) {
 	const cpf = generateValidCPF();
 	const idempotencyKey = `k6-${randomString(16)}`;
 	const requestId = generateUUID();
@@ -79,6 +120,7 @@ export default function () {
 		"Content-Type": "application/json",
 		"X-Idempotency-Key": idempotencyKey,
 		"X-Correlation-Id": correlationId,
+		"Authorization": data.token,
 	};
 
 	// Create Entry payload - now includes openingDate and requestId per DICT spec
@@ -119,43 +161,44 @@ export default function () {
 		},
 	});
 
-	sleep(0.5);
+	sleep(1.0); // Slow down write ops
 
-	// Get Entry
-	const getRes = http.get(`${BASE_URL}/entries/${cpf}`, { headers: { "X-Correlation-Id": correlationId } });
-	check(getRes, {
-		"get: status is 200": (r) => r.status === 200,
-		"get: correct key": (r) => {
-			const body = JSON.parse(r.body);
-			return body.data && body.data.key === cpf;
-		},
-		"get: has keyOwnershipDate": (r) => {
-			const body = JSON.parse(r.body);
-			return body.data && body.data.keyOwnershipDate !== undefined;
-		},
-	});
+	// Get Entry - Conditional execution to respect Rate Limit (2 req/min)
+	// 10 VUs executing every ~2s = ~300 iterations/min
+	// We need < 2 reads/min. Probability ~ 0.005 (0.5%)
+	if (createRes.status === 201) {
+		if (Math.random() < 0.005) {
+			const getRes = http.get(`${BASE_URL}/entries/${cpf}`, { headers });
+			check(getRes, {
+				"get: status is 200": (r) => r.status === 200,
+				"get: correct key": (r) => {
+					const body = JSON.parse(r.body);
+					return body.data && body.data.key === cpf;
+				},
+				"get: has keyOwnershipDate": (r) => {
+					const body = JSON.parse(r.body);
+					return body.data && body.data.keyOwnershipDate !== undefined;
+				},
+			});
+			sleep(0.5);
+		}
 
-	sleep(0.5);
-
-	// Delete Entry - now uses POST /entries/{key}/delete per DICT spec
-	const deletePayload = JSON.stringify({
-		key: cpf,
-		participant: "12345678",
-		reason: "USER_REQUESTED",
-	});
-	const deleteRes = http.post(`${BASE_URL}/entries/${cpf}/delete`, deletePayload, { 
-		headers: { 
-			"Content-Type": "application/json",
-			"X-Correlation-Id": correlationId,
-		} 
-	});
-	check(deleteRes, {
-		"delete: status is 200": (r) => r.status === 200,
-		"delete: has data.key": (r) => {
-			const body = JSON.parse(r.body);
-			return body.data && body.data.key === cpf;
-		},
-	});
+		// Delete Entry - now uses POST /entries/{key}/delete per DICT spec
+		const deletePayload = JSON.stringify({
+			key: cpf,
+			participant: "12345678",
+			reason: "USER_REQUESTED",
+		});
+		// Use correct headers
+		const deleteRes = http.post(`${BASE_URL}/entries/${cpf}/delete`, deletePayload, { headers });
+		check(deleteRes, {
+			"delete: status is 200": (r) => r.status === 200,
+			"delete: has data.key": (r) => {
+				const body = JSON.parse(r.body);
+				return body.data && body.data.key === cpf;
+			},
+		});
+	}
 
 	sleep(1);
 }

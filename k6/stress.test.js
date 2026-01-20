@@ -1,4 +1,4 @@
-import { uuidv4 } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
+import { uuidv4, randomString } from "https://jslib.k6.io/k6-utils/1.4.0/index.js";
 import { check, sleep } from "k6";
 import http from "k6/http";
 
@@ -50,12 +50,54 @@ function generateValidCPF() {
 	return digits.join("");
 }
 
-export default function () {
+export function setup() {
+	// Authentication
+	// Create a unique user for this test run
+	const userCpf = generateValidCPF();
+	const userEmail = `stress_test_${randomString(5)}@test.com`;
+	const userPayload = JSON.stringify({
+		name: `Stress Test User`,
+		email: userEmail,
+		password: "securepassword123",
+		cpf: userCpf,
+	});
+
+	// Register
+	const registerRes = http.post(`${BASE_URL}/auth/register`, userPayload, {
+		headers: { "Content-Type": "application/json" },
+	});
+
+	if (registerRes.status !== 201) {
+		console.log(`Registration response: ${registerRes.body}`);
+	}
+
+	// Login
+	const loginRes = http.post(
+		`${BASE_URL}/auth/login`,
+		JSON.stringify({
+			email: userEmail,
+			password: "securepassword123",
+		}),
+		{
+			headers: { "Content-Type": "application/json" },
+		},
+	);
+
+	if (loginRes.status !== 200) {
+		throw new Error(`Login failed: ${loginRes.status} ${loginRes.body}`);
+	}
+
+	const token = JSON.parse(loginRes.body).data.token;
+	return { token: token };
+}
+
+export default function (data) {
 	const cpf = generateValidCPF();
 
 	const headers = {
 		"Content-Type": "application/json",
 		"x-idempotency-key": uuidv4(),
+		"Authorization": data.token,
 	};
 
 	const payload = JSON.stringify({
@@ -82,17 +124,25 @@ export default function () {
 
 	// Read
 	if (createRes.status === 201) {
-		const getRes = http.get(`${BASE_URL}/entries/${cpf}`);
-		check(getRes, {
-			"get success": (r) => r.status === 200,
-		});
+		// Only read very rarely (0.001% probability)
+		if (Math.random() < 0.00001) {
+			const getRes = http.get(`${BASE_URL}/entries/${cpf}`, { headers });
+			check(getRes, {
+				"get success": (r) => r.status === 200,
+			});
+		}
 
-		// Delete
-		const delRes = http.del(`${BASE_URL}/entries/${cpf}`);
+		// Delete - POST with payload
+		const deletePayload = JSON.stringify({
+			key: cpf,
+			participant: "12345678",
+			reason: "USER_REQUESTED",
+		});
+		const delRes = http.post(`${BASE_URL}/entries/${cpf}/delete`, deletePayload, { headers });
 		check(delRes, {
 			"delete success": (r) => r.status === 200 || r.status === 404,
 		});
 	}
 
-	sleep(0.1);
+	sleep(5); // Throttle for 100 VUs to stay under 1200 req/min
 }

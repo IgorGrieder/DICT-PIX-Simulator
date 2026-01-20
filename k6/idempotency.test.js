@@ -39,6 +39,47 @@ function generateUUID() {
 	});
 }
 
+export function setup() {
+	// Authentication
+	// Create a unique user for this test run
+	const userCpf = generateValidCPF();
+	const userEmail = `idempotency_test_${randomString(5)}@test.com`;
+	const userPayload = JSON.stringify({
+		name: `Idempotency Test User`,
+		email: userEmail,
+		password: "securepassword123",
+		cpf: userCpf,
+	});
+
+	// Register
+	const registerRes = http.post(`${BASE_URL}/auth/register`, userPayload, {
+		headers: { "Content-Type": "application/json" },
+	});
+
+	if (registerRes.status !== 201) {
+		console.log(`Registration response: ${registerRes.body}`);
+	}
+
+	// Login
+	const loginRes = http.post(
+		`${BASE_URL}/auth/login`,
+		JSON.stringify({
+			email: userEmail,
+			password: "securepassword123",
+		}),
+		{
+			headers: { "Content-Type": "application/json" },
+		},
+	);
+
+	if (loginRes.status !== 200) {
+		throw new Error(`Login failed: ${loginRes.status} ${loginRes.body}`);
+	}
+
+	const token = JSON.parse(loginRes.body).data.token;
+	return { token: token };
+}
+
 export const options = {
 	scenarios: {
 		idempotency_test: {
@@ -52,7 +93,7 @@ export const options = {
 	},
 };
 
-export default function () {
+export default function (data) {
 	const cpf = generateValidCPF();
 	const idempotencyKey = `idem-${randomString(16)}`;
 	const requestId = generateUUID();
@@ -60,6 +101,7 @@ export default function () {
 	const headers = {
 		"Content-Type": "application/json",
 		"X-Idempotency-Key": idempotencyKey,
+		"Authorization": data.token,
 	};
 
 	const payload = JSON.stringify({
@@ -103,7 +145,10 @@ export default function () {
 		reason: "USER_REQUESTED",
 	});
 	http.post(`${BASE_URL}/entries/${cpf}/delete`, deletePayload, { 
-		headers: { "Content-Type": "application/json" } 
+		headers: { 
+			"Content-Type": "application/json",
+			"Authorization": data.token,
+		} 
 	});
 
 	sleep(0.5);

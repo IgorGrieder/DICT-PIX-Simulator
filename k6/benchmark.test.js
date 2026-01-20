@@ -188,6 +188,7 @@ export function insertPhase(data) {
 	if (!success) {
 		errorRate.add(1, { app: APP_NAME, operation: "create" });
 	}
+	sleep(3);
 }
 
 export function mixedPhase(data) {
@@ -202,26 +203,35 @@ export function mixedPhase(data) {
 	const isRead = Math.random() < 0.7;
 
 	if (isRead) {
-		const startTime = Date.now();
-		const res = http.get(`${BASE_URL}/entries/${cpf}`, {
-			headers,
-			tags: { operation: "read", phase: "mixed", app: APP_NAME },
-		});
-		const duration = Date.now() - startTime;
+		// Heavily throttle reads to respect 2 req/min limit
+		if (Math.random() < 0.001) {
+			const startTime = Date.now();
+			const res = http.get(`${BASE_URL}/entries/${cpf}`, {
+				headers,
+				tags: { operation: "read", phase: "mixed", app: APP_NAME },
+			});
+			const duration = Date.now() - startTime;
 
-		readDuration.add(duration, { app: APP_NAME });
-		readCounter.add(1, { app: APP_NAME });
+			readDuration.add(duration, { app: APP_NAME });
+			readCounter.add(1, { app: APP_NAME });
 
-		const success = check(res, {
-			"read: status 200 or 404": (r) => r.status === 200 || r.status === 404,
-		});
+			const success = check(res, {
+				"read: status 200 or 404": (r) => r.status === 200 || r.status === 404,
+			});
 
-		if (!success) {
-			errorRate.add(1, { app: APP_NAME, operation: "read" });
+			if (!success) {
+				errorRate.add(1, { app: APP_NAME, operation: "read" });
+			}
 		}
+		sleep(3);
 	} else {
 		const startTime = Date.now();
-		const res = http.del(`${BASE_URL}/entries/${cpf}`, null, {
+		const deletePayload = JSON.stringify({
+			key: cpf,
+			participant: "12345678",
+			reason: "USER_REQUESTED",
+		});
+		const res = http.post(`${BASE_URL}/entries/${cpf}/delete`, deletePayload, {
 			headers,
 			tags: { operation: "delete", phase: "mixed", app: APP_NAME },
 		});
@@ -237,6 +247,7 @@ export function mixedPhase(data) {
 		if (!success) {
 			errorRate.add(1, { app: APP_NAME, operation: "delete" });
 		}
+		sleep(3);
 	}
 }
 
@@ -249,7 +260,12 @@ export function cleanupPhase(data) {
 	const cpf = cpfPool[cpfIndex];
 	const headers = getHeaders(data?.token);
 
-	const res = http.del(`${BASE_URL}/entries/${cpf}`, null, {
+	const deletePayload = JSON.stringify({
+		key: cpf,
+		participant: "12345678",
+		reason: "USER_REQUESTED",
+	});
+	const res = http.post(`${BASE_URL}/entries/${cpf}/delete`, deletePayload, {
 		headers,
 		tags: { operation: "cleanup", phase: "cleanup", app: APP_NAME },
 	});
@@ -257,6 +273,7 @@ export function cleanupPhase(data) {
 	check(res, {
 		"cleanup: status 200 or 404": (r) => r.status === 200 || r.status === 404,
 	});
+	sleep(3);
 }
 
 // ============================================================================
@@ -315,7 +332,7 @@ export function setup() {
 		throw new Error(`Login failed: ${loginRes.status} ${loginRes.body}`);
 	}
 
-	const token = JSON.parse(loginRes.body).token;
+	const token = JSON.parse(loginRes.body).data.token;
 	console.log(`Authentication successful. Token obtained.`);
 
 	return {
