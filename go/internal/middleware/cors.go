@@ -1,19 +1,42 @@
 package middleware
 
-import "net/http"
+import (
+	"net/http"
 
-// CORSMiddleware adds CORS headers to responses
+	"github.com/rs/cors"
+)
+
+// CORSMiddleware adds CORS headers to responses using rs/cors library
 func CORSMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Idempotency-Key, X-User-Id")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next.ServeHTTP(w, r)
+	c := cors.New(cors.Options{
+		// Allow all origins dynamically to support credentials
+		AllowOriginFunc: func(origin string) bool {
+			return true
+		},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodDelete,
+			http.MethodOptions,
+			http.MethodHead,
+		},
+		AllowedHeaders: []string{
+			"Content-Type",
+			"Authorization",
+			"X-Idempotency-Key",
+			"X-User-Id",
+			"Accept",
+			"Origin",
+			"X-Requested-With",
+			// OpenTelemetry headers
+			"traceparent",
+			"tracestate",
+			"baggage",
+			"sentry-trace",
+		},
+		AllowCredentials: true,
 	})
+
+	return c.Handler(next)
 }
