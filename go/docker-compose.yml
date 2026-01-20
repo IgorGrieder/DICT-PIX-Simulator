@@ -8,7 +8,7 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/dict
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
       - REDIS_URI=redis://redis:6379
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_SECRET=a-string-secret-at-least-256-bits-long
       - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-true}
       - RATE_LIMIT_BUCKET_SIZE=60
       - RATE_LIMIT_REFILL_SECONDS=60
