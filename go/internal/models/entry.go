@@ -212,6 +212,7 @@ func (r *EntryRepository) DeleteByKeyAndParticipant(ctx context.Context, key str
 
 // UpdateByKey updates an entry by its key
 // Only updates the fields that are provided in the request
+// Also ensures that the key is not an EVP key
 func (r *EntryRepository) UpdateByKey(ctx context.Context, key string, req *UpdateEntryRequest) (*Entry, error) {
 	update := bson.M{
 		"$set": bson.M{
@@ -237,7 +238,16 @@ func (r *EntryRepository) UpdateByKey(ctx context.Context, key string, req *Upda
 
 	var entry Entry
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
-	err := r.collection.FindOneAndUpdate(ctx, bson.M{"key": key}, update, opts).Decode(&entry)
+
+	// Filter by key AND ensure KeyType is not EVP
+	filter := bson.M{
+		"key": key,
+		"keyType": bson.M{
+			"$ne": KeyTypeEVP,
+		},
+	}
+
+	err := r.collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&entry)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil

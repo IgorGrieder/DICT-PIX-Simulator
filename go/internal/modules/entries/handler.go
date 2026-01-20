@@ -300,41 +300,8 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if entry exists
-	existing, err := h.repo.FindByKey(ctx, key)
-	if err != nil {
-		span.SetStatus(codes.Error, "Failed to find entry")
-		span.SetAttributes(
-			attribute.String("error.type", "repository"),
-			attribute.String("error.message", err.Error()),
-		)
-		span.RecordError(err)
-		httputil.WriteAPIError(w, r, constants.ErrFailedToFindEntry)
-		return
-	}
-
-	if existing == nil {
-		span.SetStatus(codes.Error, "Entry not found")
-		span.SetAttributes(
-			attribute.String("error.type", "not_found"),
-			attribute.String("error.message", "Entry does not exist"),
-		)
-		httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
-		return
-	}
-
-	// EVP keys cannot be updated per DICT spec
-	if existing.KeyType == models.KeyTypeEVP {
-		span.SetStatus(codes.Error, "EVP key not updatable")
-		span.SetAttributes(
-			attribute.String("error.type", "evp_not_updatable"),
-			attribute.String("error.message", "EVP keys cannot be updated"),
-		)
-		httputil.WriteAPIError(w, r, constants.ErrEVPKeyNotUpdatable)
-		return
-	}
-
-	// Update the entry
+	// Optimistic update: try to update immediately
+	// The repository method now filters out EVP keys automatically
 	entry, err := h.repo.UpdateByKey(ctx, key, &req)
 	if err != nil {
 		span.SetStatus(codes.Error, "Failed to update entry")
@@ -347,12 +314,43 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If entry is nil, it means no document was updated.
+	// This could mean:
+	// 1. The key does not exist
+	// 2. The key exists but is an EVP key (which we can't update)
+	// We need to check which case it is to return the correct error.
 	if entry == nil {
-		span.SetStatus(codes.Error, "Entry not found after update")
-		span.SetAttributes(
-			attribute.String("error.type", "not_found"),
-			attribute.String("error.message", "Entry not found after update"),
-		)
+		existing, err := h.repo.FindByKey(ctx, key)
+		if err != nil {
+			span.SetStatus(codes.Error, "Failed to check entry existence")
+			span.RecordError(err)
+			httputil.WriteAPIError(w, r, constants.ErrFailedToFindEntry)
+			return
+		}
+
+		if existing == nil {
+			span.SetStatus(codes.Error, "Entry not found")
+			span.SetAttributes(
+				attribute.String("error.type", "not_found"),
+				attribute.String("error.message", "Entry does not exist"),
+			)
+			httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
+			return
+		}
+
+		// If we found it, it MUST be an EVP key because the UpdateByKey query
+		// only excluded EVP keys.
+		if existing.KeyType == models.KeyTypeEVP {
+			span.SetStatus(codes.Error, "EVP key not updatable")
+			span.SetAttributes(
+				attribute.String("error.type", "evp_not_updatable"),
+				attribute.String("error.message", "EVP keys cannot be updated"),
+			)
+			httputil.WriteAPIError(w, r, constants.ErrEVPKeyNotUpdatable)
+			return
+		}
+
+		// Fallback for any other reason (should theoretically not happen if logic is correct)
 		httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
 		return
 	}
