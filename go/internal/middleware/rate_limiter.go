@@ -41,7 +41,7 @@ func (r *responseCapture) Write(b []byte) (int, error) {
 // 1. Checks if the request is allowed before processing
 // 2. Captures the response status code
 // 3. Deducts tokens based on the response (error-based counting)
-func (m *Manager) RateLimiterWithPolicy(policy ratelimit.Policy) func(http.Handler) http.Handler {
+func (m *Manager) RateLimiterWithPolicy(policy ratelimit.Policy) func(handler http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Skip rate limiting if disabled

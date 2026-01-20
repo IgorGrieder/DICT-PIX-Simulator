@@ -18,8 +18,10 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
+const Bearer = "Bearer "
+
 // AuthMiddleware validates JWT tokens and sets X-User-Id header for downstream handlers
-func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
+func AuthMiddleware(jwtSecret string) func(handler http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authorization := r.Header.Get("Authorization")
@@ -30,7 +32,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			}
 
 			// Remove "Bearer " prefix if present
-			tokenString := strings.TrimPrefix(authorization, "Bearer ")
+			tokenString := strings.TrimPrefix(authorization, Bearer)
 
 			token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (any, error) {
 				return []byte(jwtSecret), nil

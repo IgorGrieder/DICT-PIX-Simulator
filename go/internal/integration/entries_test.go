@@ -13,10 +13,6 @@ import (
 	"github.com/dict-simulator/go/internal/models"
 )
 
-// =============================================================================
-// Entry Lifecycle Tests
-// =============================================================================
-
 func TestCreateEntry(t *testing.T) {
 	t.Parallel()
 
@@ -488,10 +484,6 @@ func TestIdempotency_DifferentKeyCausesConflict(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, resp2.StatusCode)
 }
 
-// =============================================================================
-// Correlation ID Tests
-// =============================================================================
-
 func TestCorrelationId_ReturnsProvidedId(t *testing.T) {
 	t.Parallel()
 
@@ -534,10 +526,6 @@ func TestCorrelationId_GeneratedWhenNotProvided(t *testing.T) {
 	assert.NotEmpty(t, apiResp.CorrelationId)
 }
 
-// =============================================================================
-// Response Metadata Tests
-// =============================================================================
-
 func TestResponseTime_IncludedInAllResponses(t *testing.T) {
 	t.Parallel()
 
@@ -555,10 +543,6 @@ func TestResponseTime_IncludedInAllResponses(t *testing.T) {
 	// Response time should be recent (within last minute)
 	assert.WithinDuration(t, time.Now(), apiResp.ResponseTime, time.Minute)
 }
-
-// =============================================================================
-// Rate Limiting Tests (Sequential - cannot run in parallel)
-// =============================================================================
 
 func TestRateLimiting_HeadersPresent(t *testing.T) {
 	t.Parallel()
