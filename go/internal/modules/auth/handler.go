@@ -75,13 +75,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 			attribute.String("error.message", err.Error()),
 		)
 		span.RecordError(err)
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage("JSON decode error: "+err.Error()))
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
 		return
 	}
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage(err.Error()))
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
 		return
 	}
 
@@ -142,13 +142,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 			attribute.String("error.message", err.Error()),
 		)
 		span.RecordError(err)
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage("JSON decode error: "+err.Error()))
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
 		return
 	}
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage(err.Error()))
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
 		return
 	}
 
