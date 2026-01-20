@@ -191,10 +191,16 @@ func (r *EntryRepository) FindByKey(ctx context.Context, key string) (*Entry, er
 	return &entry, nil
 }
 
-// DeleteByKey deletes an entry by its key and returns the deleted entry
-func (r *EntryRepository) DeleteByKey(ctx context.Context, key string) (*Entry, error) {
+// DeleteByKeyAndParticipant deletes an entry by its key and participant, and returns the deleted entry
+// This combined operation ensures atomicity and reduces DB calls
+func (r *EntryRepository) DeleteByKeyAndParticipant(ctx context.Context, key string, participant string) (*Entry, error) {
 	var entry Entry
-	err := r.collection.FindOneAndDelete(ctx, bson.M{"key": key}).Decode(&entry)
+	filter := bson.M{
+		"key":                 key,
+		"account.participant": participant,
+	}
+
+	err := r.collection.FindOneAndDelete(ctx, filter).Decode(&entry)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, nil

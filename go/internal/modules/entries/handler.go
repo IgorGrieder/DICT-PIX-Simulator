@@ -209,42 +209,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if entry exists and validate participant
-	existing, err := h.repo.FindByKey(ctx, key)
-	if err != nil {
-		span.SetStatus(codes.Error, "Failed to find entry")
-		span.SetAttributes(
-			attribute.String("error.type", "repository"),
-			attribute.String("error.message", err.Error()),
-		)
-		span.RecordError(err)
-		httputil.WriteAPIError(w, r, constants.ErrFailedToFindEntry)
-		return
-	}
-
-	if existing == nil {
-		span.SetStatus(codes.Error, "Entry not found")
-		span.SetAttributes(
-			attribute.String("error.type", "not_found"),
-			attribute.String("error.message", "Entry does not exist"),
-		)
-		httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
-		return
-	}
-
-	// Verify participant matches the entry's participant (authorization check)
-	if existing.Account.Participant != req.Participant {
-		span.SetStatus(codes.Error, "Forbidden participant")
-		span.SetAttributes(
-			attribute.String("error.type", "forbidden"),
-			attribute.String("error.message", "Participant mismatch"),
-		)
-		httputil.WriteAPIError(w, r, constants.ErrForbiddenParticipant)
-		return
-	}
-
-	// Delete the entry
-	entry, err := h.repo.DeleteByKey(ctx, key)
+	entry, err := h.repo.DeleteByKeyAndParticipant(ctx, key, req.Participant)
 	if err != nil {
 		span.SetStatus(codes.Error, "Failed to delete entry")
 		span.SetAttributes(
@@ -257,11 +222,12 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if entry == nil {
-		span.SetStatus(codes.Error, "Entry not found after delete")
+		span.SetStatus(codes.Error, "Entry not found or forbidden")
 		span.SetAttributes(
 			attribute.String("error.type", "not_found"),
-			attribute.String("error.message", "Entry not found after delete"),
+			attribute.String("error.message", "Entry not found or participant mismatch"),
 		)
+
 		httputil.WriteAPIError(w, r, constants.ErrEntryNotFound)
 		return
 	}

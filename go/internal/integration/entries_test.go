@@ -373,13 +373,15 @@ func TestDeleteEntry_WrongParticipant(t *testing.T) {
 	resp := client.DeleteEntry(cpf, "99999999", "USER_REQUESTED")
 	defer resp.Body.Close()
 
-	assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	// With the single-query optimization, we can't distinguish between "key not found"
+	// and "participant mismatch", so we return 404 for both (safer defaults anyway)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	var apiResp struct {
 		Error string `json:"error"`
 	}
 	json.NewDecoder(resp.Body).Decode(&apiResp)
-	assert.Equal(t, "FORBIDDEN", apiResp.Error)
+	assert.Equal(t, "ENTRY_NOT_FOUND", apiResp.Error)
 }
 
 func TestDeleteEntry_InvalidReason(t *testing.T) {
