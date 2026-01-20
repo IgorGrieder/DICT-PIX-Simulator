@@ -6,199 +6,203 @@ const BASE_URL = __ENV.BASE_URL || "http://localhost:3000";
 
 // Generate valid CPF with Módulo 11
 function generateValidCPF() {
-	const digits = [];
-	for (let i = 0; i < 9; i++) {
-		digits.push(Math.floor(Math.random() * 10));
-	}
+  const digits = [];
+  for (let i = 0; i < 9; i++) {
+    digits.push(Math.floor(Math.random() * 10));
+  }
 
-	// First check digit
-	let sum = 0;
-	for (let i = 0; i < 9; i++) {
-		sum += digits[i] * (10 - i);
-	}
-	let remainder = (sum * 10) % 11;
-	if (remainder === 10) remainder = 0;
-	digits.push(remainder);
+  // First check digit
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += digits[i] * (10 - i);
+  }
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  digits.push(remainder);
 
-	// Second check digit
-	sum = 0;
-	for (let i = 0; i < 10; i++) {
-		sum += digits[i] * (11 - i);
-	}
-	remainder = (sum * 10) % 11;
-	if (remainder === 10) remainder = 0;
-	digits.push(remainder);
+  // Second check digit
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += digits[i] * (11 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  digits.push(remainder);
 
-	return digits.join("");
+  return digits.join("");
 }
 
 // Generate UUID v4 for requestId
 function generateUUID() {
-	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-		const r = Math.random() * 16 | 0;
-		const v = c === 'x' ? r : (r & 0x3 | 0x8);
-		return v.toString(16);
-	});
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 }
 
 // Test configuration
 export const options = {
-	scenarios: {
-		// Smoke test
-		smoke: {
-			executor: "constant-vus",
-			vus: 1,
-			duration: "10s",
-			startTime: "0s",
-		},
-		// Load test
-		load: {
-			executor: "ramping-vus",
-			startVUs: 0,
-			stages: [
-				{ duration: "30s", target: 10 },
-				{ duration: "1m", target: 10 },
-				{ duration: "30s", target: 0 },
-			],
-			startTime: "15s",
-		},
-	},
-	thresholds: {
-		http_req_duration: ["p(95)<500"], // 95% of requests should be below 500ms
-		http_req_failed: ["rate<0.01"], // Less than 1% failure rate
-	},
+  scenarios: {
+    // Smoke test
+    smoke: {
+      executor: "constant-vus",
+      vus: 1,
+      duration: "10s",
+      startTime: "0s",
+    },
+    // Load test
+    load: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "30s", target: 10 },
+        { duration: "1m", target: 10 },
+        { duration: "30s", target: 0 },
+      ],
+      startTime: "15s",
+    },
+  },
+  thresholds: {
+    http_req_duration: ["p(95)<500"], // 95% of requests should be below 500ms
+    http_req_failed: ["rate<0.01"], // Less than 1% failure rate
+  },
 };
 
 export function setup() {
-	// Authentication
-	// Create a unique user for this test run
-	const userCpf = generateValidCPF();
-	const userEmail = `entries_test_${randomString(5)}@test.com`;
-	const userPayload = JSON.stringify({
-		name: `Entries Test User`,
-		email: userEmail,
-		password: "securepassword123",
-		cpf: userCpf,
-	});
+  // Authentication
+  // Create a unique user for this test run
+  const userCpf = generateValidCPF();
+  const userEmail = `entries_test_${randomString(5)}@test.com`;
+  const userPayload = JSON.stringify({
+    name: `Entries Test User`,
+    email: userEmail,
+    password: "securepassword123",
+    cpf: userCpf,
+  });
 
-	// Register
-	const registerRes = http.post(`${BASE_URL}/auth/register`, userPayload, {
-		headers: { "Content-Type": "application/json" },
-	});
+  // Register
+  const registerRes = http.post(`${BASE_URL}/auth/register`, userPayload, {
+    headers: { "Content-Type": "application/json" },
+  });
 
-	if (registerRes.status !== 201) {
-		console.log(`Registration response: ${registerRes.body}`);
-	}
+  if (registerRes.status !== 201) {
+    console.log(`Registration response: ${registerRes.body}`);
+  }
 
-	// Login
-	const loginRes = http.post(
-		`${BASE_URL}/auth/login`,
-		JSON.stringify({
-			email: userEmail,
-			password: "securepassword123",
-		}),
-		{
-			headers: { "Content-Type": "application/json" },
-		},
-	);
+  // Login
+  const loginRes = http.post(
+    `${BASE_URL}/auth/login`,
+    JSON.stringify({
+      email: userEmail,
+      password: "securepassword123",
+    }),
+    {
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 
-	if (loginRes.status !== 200) {
-		throw new Error(`Login failed: ${loginRes.status} ${loginRes.body}`);
-	}
+  if (loginRes.status !== 200) {
+    throw new Error(`Login failed: ${loginRes.status} ${loginRes.body}`);
+  }
 
-	const token = JSON.parse(loginRes.body).data.token;
-	return { token: token };
+  const token = JSON.parse(loginRes.body).data.token;
+  return { token: token };
 }
 
 export default function (data) {
-	const cpf = generateValidCPF();
-	const idempotencyKey = `k6-${randomString(16)}`;
-	const requestId = generateUUID();
-	const correlationId = generateUUID();
+  const cpf = generateValidCPF();
+  const idempotencyKey = `k6-${randomString(16)}`;
+  const requestId = generateUUID();
+  const correlationId = generateUUID();
 
-	const headers = {
-		"Content-Type": "application/json",
-		"X-Idempotency-Key": idempotencyKey,
-		"X-Correlation-Id": correlationId,
-		"Authorization": data.token,
-	};
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Idempotency-Key": idempotencyKey,
+    "X-Correlation-Id": correlationId,
+    Authorization: data.token,
+  };
 
-	// Create Entry payload - now includes openingDate and requestId per DICT spec
-	const payload = JSON.stringify({
-		key: cpf,
-		keyType: "CPF",
-		account: {
-			participant: "12345678",
-			branch: "0001",
-			accountNumber: `${Math.floor(Math.random() * 1000000)}`,
-			accountType: "CACC",
-			openingDate: new Date().toISOString(), // NEW: required per DICT spec
-		},
-		owner: {
-			type: "NATURAL_PERSON",
-			taxIdNumber: cpf,
-			name: `Test User ${randomString(8)}`,
-		},
-		reason: "USER_REQUESTED",      // NEW: required per DICT spec
-		requestId: requestId,           // NEW: required per DICT spec (idempotency)
-	});
+  // Create Entry payload - now includes openingDate and requestId per DICT spec
+  const payload = JSON.stringify({
+    key: cpf,
+    keyType: "CPF",
+    account: {
+      participant: "12345678",
+      branch: "0001",
+      accountNumber: `${Math.floor(Math.random() * 1000000)}`,
+      accountType: "CACC",
+      openingDate: new Date().toISOString(),
+    },
+    owner: {
+      type: "NATURAL_PERSON",
+      taxIdNumber: cpf,
+      name: `Test User ${randomString(8)}`,
+    },
+    reason: "USER_REQUESTED",
+    requestId: requestId,
+  });
 
-	// Create Entry
-	const createRes = http.post(`${BASE_URL}/entries`, payload, { headers });
-	check(createRes, {
-		"create: status is 201": (r) => r.status === 201,
-		"create: has data.key": (r) => {
-			const body = JSON.parse(r.body);
-			return body.data && body.data.key === cpf;
-		},
-		"create: has correlationId": (r) => {
-			const body = JSON.parse(r.body);
-			return body.correlationId === correlationId;
-		},
-		"create: has responseTime": (r) => {
-			const body = JSON.parse(r.body);
-			return body.responseTime !== undefined;
-		},
-	});
+  // Create Entry
+  const createRes = http.post(`${BASE_URL}/entries`, payload, { headers });
+  check(createRes, {
+    "create: status is 201": (r) => r.status === 201,
+    "create: has data.key": (r) => {
+      const body = JSON.parse(r.body);
+      return body.data && body.data.key === cpf;
+    },
+    "create: has correlationId": (r) => {
+      const body = JSON.parse(r.body);
+      return body.correlationId === correlationId;
+    },
+    "create: has responseTime": (r) => {
+      const body = JSON.parse(r.body);
+      return body.responseTime !== undefined;
+    },
+  });
 
-	sleep(1.0); // Slow down write ops
+  sleep(1.0); // Slow down write ops
 
-	// Get Entry - Conditional execution to respect Rate Limit (2 req/min)
-	// 10 VUs executing every ~2s = ~300 iterations/min
-	// We need < 2 reads/min. Probability ~ 0.005 (0.5%)
-	if (createRes.status === 201) {
-		if (Math.random() < 0.005) {
-			const getRes = http.get(`${BASE_URL}/entries/${cpf}`, { headers });
-			check(getRes, {
-				"get: status is 200": (r) => r.status === 200,
-				"get: correct key": (r) => {
-					const body = JSON.parse(r.body);
-					return body.data && body.data.key === cpf;
-				},
-				"get: has keyOwnershipDate": (r) => {
-					const body = JSON.parse(r.body);
-					return body.data && body.data.keyOwnershipDate !== undefined;
-				},
-			});
-			sleep(0.5);
-		}
+  // Get Entry - Conditional execution to respect Rate Limit (2 req/min)
+  // 10 VUs executing every ~2s = ~300 iterations/min
+  // We need < 2 reads/min. Probability ~ 0.005 (0.5%)
+  if (createRes.status === 201) {
+    if (Math.random() < 0.005) {
+      const getRes = http.get(`${BASE_URL}/entries/${cpf}`, { headers });
+      check(getRes, {
+        "get: status is 200": (r) => r.status === 200,
+        "get: correct key": (r) => {
+          const body = JSON.parse(r.body);
+          return body.data && body.data.key === cpf;
+        },
+        "get: has keyOwnershipDate": (r) => {
+          const body = JSON.parse(r.body);
+          return body.data && body.data.keyOwnershipDate !== undefined;
+        },
+      });
+      sleep(0.5);
+    }
 
-		// Delete Entry - now uses POST /entries/{key}/delete per DICT spec
-		const deletePayload = JSON.stringify({
-			key: cpf,
-			participant: "12345678",
-			reason: "USER_REQUESTED",
-		});
-		// Use correct headers
-		const deleteRes = http.post(`${BASE_URL}/entries/${cpf}/delete`, deletePayload, { headers });
-		check(deleteRes, {
-			"delete: status is 200": (r) => r.status === 200,
-			"delete: has data.key": (r) => {
-				const body = JSON.parse(r.body);
-				return body.data && body.data.key === cpf;
-			},
-		});
-	}
+    // Delete Entry - now uses POST /entries/{key}/delete per DICT spec
+    const deletePayload = JSON.stringify({
+      key: cpf,
+      participant: "12345678",
+      reason: "USER_REQUESTED",
+    });
+    // Use correct headers
+    const deleteRes = http.post(
+      `${BASE_URL}/entries/${cpf}/delete`,
+      deletePayload,
+      { headers },
+    );
+    check(deleteRes, {
+      "delete: status is 200": (r) => r.status === 200,
+      "delete: has data.key": (r) => {
+        const body = JSON.parse(r.body);
+        return body.data && body.data.key === cpf;
+      },
+    });
+  }
 
-	sleep(1);
+  sleep(1);
 }

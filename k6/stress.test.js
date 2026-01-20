@@ -108,12 +108,15 @@ export default function (data) {
 			branch: "0001",
 			accountNumber: `${Math.floor(Math.random() * 1000000)}`,
 			accountType: "CACC",
+			openingDate: new Date().toISOString(),
 		},
 		owner: {
 			type: "NATURAL_PERSON",
 			taxIdNumber: cpf,
 			name: "Stress Test",
 		},
+		reason: "USER_REQUESTED",
+		requestId: uuidv4(),
 	});
 
 	// Create
