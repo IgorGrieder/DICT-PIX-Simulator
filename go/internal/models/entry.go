@@ -39,7 +39,7 @@ type Account struct {
 	Branch        string      `bson:"branch" json:"branch" validate:"required,len=4,numeric" example:"0001"`
 	AccountNumber string      `bson:"accountNumber" json:"accountNumber" validate:"required" example:"123456789"`
 	AccountType   AccountType `bson:"accountType" json:"accountType" validate:"required,oneof=CACC SVGS SLRY" example:"CACC"`
-	OpeningDate   time.Time   `bson:"openingDate" json:"openingDate" validate:"required"`
+	OpeningDate   time.Time   `bson:"openingDate" json:"openingDate" validate:"required" example:"2024-01-15T00:00:00Z"`
 }
 
 // Owner represents the account owner information

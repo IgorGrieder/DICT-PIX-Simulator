@@ -43,7 +43,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_modules_auth.LoginRequest"
+                            "$ref": "#/definitions/auth.LoginRequest"
                         }
                     }
                 ],
@@ -53,13 +53,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                    "$ref": "#/definitions/httputil.APIResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_modules_auth.AuthResponse"
+                                            "$ref": "#/definitions/auth.AuthResponse"
                                         }
                                     }
                                 }
@@ -69,19 +69,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "401": {
                         "description": "Invalid credentials",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -107,7 +107,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_modules_auth.RegisterRequest"
+                            "$ref": "#/definitions/auth.RegisterRequest"
                         }
                     }
                 ],
@@ -117,13 +117,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                    "$ref": "#/definitions/httputil.APIResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_modules_auth.AuthResponse"
+                                            "$ref": "#/definitions/auth.AuthResponse"
                                         }
                                     }
                                 }
@@ -133,19 +133,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request body",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "409": {
                         "description": "User already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -183,7 +183,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.CreateEntryRequest"
+                            "$ref": "#/definitions/models.CreateEntryRequest"
                         }
                     }
                 ],
@@ -193,13 +193,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                    "$ref": "#/definitions/httputil.APIResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse"
+                                            "$ref": "#/definitions/models.EntryResponse"
                                         }
                                     }
                                 }
@@ -209,31 +209,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request body or key format",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "409": {
                         "description": "Key already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "429": {
                         "description": "Rate limit exceeded",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -272,13 +272,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                    "$ref": "#/definitions/httputil.APIResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse"
+                                            "$ref": "#/definitions/models.EntryResponse"
                                         }
                                     }
                                 }
@@ -288,31 +288,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Key is required",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "404": {
                         "description": "Entry not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "429": {
                         "description": "Rate limit exceeded",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -348,7 +348,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.UpdateEntryRequest"
+                            "$ref": "#/definitions/models.UpdateEntryRequest"
                         }
                     }
                 ],
@@ -358,13 +358,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                    "$ref": "#/definitions/httputil.APIResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse"
+                                            "$ref": "#/definitions/models.EntryResponse"
                                         }
                                     }
                                 }
@@ -374,31 +374,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request body, key mismatch, or EVP key update attempt",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "404": {
                         "description": "Entry not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "429": {
                         "description": "Rate limit exceeded",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -436,7 +436,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.DeleteEntryRequest"
+                            "$ref": "#/definitions/models.DeleteEntryRequest"
                         }
                     }
                 ],
@@ -446,13 +446,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                                    "$ref": "#/definitions/httputil.APIResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.DeleteEntryResponse"
+                                            "$ref": "#/definitions/models.DeleteEntryResponse"
                                         }
                                     }
                                 }
@@ -462,37 +462,37 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request body or key mismatch",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden - participant mismatch",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "404": {
                         "description": "Entry not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "429": {
                         "description": "Rate limit exceeded",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse"
+                            "$ref": "#/definitions/httputil.APIResponse"
                         }
                     }
                 }
@@ -512,7 +512,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Service is healthy",
                         "schema": {
-                            "$ref": "#/definitions/internal_modules_health.HealthResponse"
+                            "$ref": "#/definitions/health.HealthResponse"
                         }
                     }
                 }
@@ -540,7 +540,72 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_dict-simulator_go_internal_httputil.APIResponse": {
+        "auth.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                },
+                "user": {
+                    "$ref": "#/definitions/models.UserResponse"
+                }
+            }
+        },
+        "auth.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "password123"
+                }
+            }
+        },
+        "auth.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6,
+                    "example": "password123"
+                }
+            }
+        },
+        "health.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                }
+            }
+        },
+        "httputil.APIResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -566,7 +631,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.Account": {
+        "models.Account": {
             "type": "object",
             "required": [
                 "accountNumber",
@@ -594,7 +659,8 @@ const docTemplate = `{
                     "example": "0001"
                 },
                 "openingDate": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2024-01-15T00:00:00Z"
                 },
                 "participant": {
                     "type": "string",
@@ -602,7 +668,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.CreateEntryRequest": {
+        "models.CreateEntryRequest": {
             "type": "object",
             "required": [
                 "account",
@@ -614,7 +680,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "account": {
-                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.Account"
+                    "$ref": "#/definitions/models.Account"
                 },
                 "key": {
                     "type": "string",
@@ -630,13 +696,13 @@ const docTemplate = `{
                     ],
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.KeyType"
+                            "$ref": "#/definitions/models.KeyType"
                         }
                     ],
                     "example": "PHONE"
                 },
                 "owner": {
-                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.Owner"
+                    "$ref": "#/definitions/models.Owner"
                 },
                 "reason": {
                     "type": "string",
@@ -652,7 +718,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.DeleteEntryRequest": {
+        "models.DeleteEntryRequest": {
             "type": "object",
             "required": [
                 "key",
@@ -681,7 +747,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.DeleteEntryResponse": {
+        "models.DeleteEntryResponse": {
             "type": "object",
             "properties": {
                 "key": {
@@ -694,11 +760,11 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.EntryResponse": {
+        "models.EntryResponse": {
             "type": "object",
             "properties": {
                 "account": {
-                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.Account"
+                    "$ref": "#/definitions/models.Account"
                 },
                 "createdAt": {
                     "type": "string"
@@ -713,20 +779,20 @@ const docTemplate = `{
                 "keyType": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.KeyType"
+                            "$ref": "#/definitions/models.KeyType"
                         }
                     ],
                     "example": "PHONE"
                 },
                 "owner": {
-                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.Owner"
+                    "$ref": "#/definitions/models.Owner"
                 },
                 "updatedAt": {
                     "type": "string"
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.KeyType": {
+        "models.KeyType": {
             "type": "string",
             "enum": [
                 "CPF",
@@ -743,7 +809,7 @@ const docTemplate = `{
                 "KeyTypeEVP"
             ]
         },
-        "github_com_dict-simulator_go_internal_models.Owner": {
+        "models.Owner": {
             "type": "object",
             "required": [
                 "name",
@@ -774,7 +840,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.UpdateAccount": {
+        "models.UpdateAccount": {
             "type": "object",
             "properties": {
                 "accountNumber": {
@@ -799,7 +865,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.UpdateEntryRequest": {
+        "models.UpdateEntryRequest": {
             "type": "object",
             "required": [
                 "key",
@@ -807,14 +873,14 @@ const docTemplate = `{
             ],
             "properties": {
                 "account": {
-                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.UpdateAccount"
+                    "$ref": "#/definitions/models.UpdateAccount"
                 },
                 "key": {
                     "type": "string",
                     "example": "+5511999999999"
                 },
                 "owner": {
-                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.UpdateOwner"
+                    "$ref": "#/definitions/models.UpdateOwner"
                 },
                 "reason": {
                     "type": "string",
@@ -828,7 +894,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.UpdateOwner": {
+        "models.UpdateOwner": {
             "type": "object",
             "properties": {
                 "name": {
@@ -839,7 +905,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_dict-simulator_go_internal_models.UserResponse": {
+        "models.UserResponse": {
             "type": "object",
             "properties": {
                 "email": {
@@ -853,71 +919,6 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "John Doe"
-                }
-            }
-        },
-        "internal_modules_auth.AuthResponse": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                },
-                "user": {
-                    "$ref": "#/definitions/github_com_dict-simulator_go_internal_models.UserResponse"
-                }
-            }
-        },
-        "internal_modules_auth.LoginRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
-                "password": {
-                    "type": "string",
-                    "example": "password123"
-                }
-            }
-        },
-        "internal_modules_auth.RegisterRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "name",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@example.com"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "John Doe"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 6,
-                    "example": "password123"
-                }
-            }
-        },
-        "internal_modules_health.HealthResponse": {
-            "type": "object",
-            "properties": {
-                "status": {
-                    "type": "string",
-                    "example": "ok"
-                },
-                "timestamp": {
-                    "type": "string",
-                    "example": "2024-01-15T10:30:00Z"
                 }
             }
         }
@@ -935,7 +936,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.0",
-	Host:             "localhost:8080",
+	Host:             "localhost:3000",
 	BasePath:         "/",
 	Schemes:          []string{"http", "https"},
 	Title:            "DICT Simulator API",

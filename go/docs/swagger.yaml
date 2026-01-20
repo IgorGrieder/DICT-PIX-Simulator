@@ -1,6 +1,52 @@
 basePath: /
 definitions:
-  github_com_dict-simulator_go_internal_httputil.APIResponse:
+  auth.AuthResponse:
+    properties:
+      token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      user:
+        $ref: '#/definitions/models.UserResponse'
+    type: object
+  auth.LoginRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      password:
+        example: password123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  auth.RegisterRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      name:
+        example: John Doe
+        type: string
+      password:
+        example: password123
+        minLength: 6
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  health.HealthResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: "2024-01-15T10:30:00Z"
+        type: string
+    type: object
+  httputil.APIResponse:
     properties:
       code:
         example: ENTRY_CREATED
@@ -19,7 +65,7 @@ definitions:
         example: "2024-01-15T10:30:00Z"
         type: string
     type: object
-  github_com_dict-simulator_go_internal_models.Account:
+  models.Account:
     properties:
       accountNumber:
         example: "123456789"
@@ -35,6 +81,7 @@ definitions:
         example: "0001"
         type: string
       openingDate:
+        example: "2024-01-15T00:00:00Z"
         type: string
       participant:
         example: "12345678"
@@ -46,16 +93,16 @@ definitions:
     - openingDate
     - participant
     type: object
-  github_com_dict-simulator_go_internal_models.CreateEntryRequest:
+  models.CreateEntryRequest:
     properties:
       account:
-        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.Account'
+        $ref: '#/definitions/models.Account'
       key:
         example: "+5511999999999"
         type: string
       keyType:
         allOf:
-        - $ref: '#/definitions/github_com_dict-simulator_go_internal_models.KeyType'
+        - $ref: '#/definitions/models.KeyType'
         enum:
         - CPF
         - CNPJ
@@ -64,7 +111,7 @@ definitions:
         - EVP
         example: PHONE
       owner:
-        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.Owner'
+        $ref: '#/definitions/models.Owner'
       reason:
         enum:
         - USER_REQUESTED
@@ -82,7 +129,7 @@ definitions:
     - reason
     - requestId
     type: object
-  github_com_dict-simulator_go_internal_models.DeleteEntryRequest:
+  models.DeleteEntryRequest:
     properties:
       key:
         example: "+5511999999999"
@@ -104,7 +151,7 @@ definitions:
     - participant
     - reason
     type: object
-  github_com_dict-simulator_go_internal_models.DeleteEntryResponse:
+  models.DeleteEntryResponse:
     properties:
       key:
         example: "+5511999999999"
@@ -113,10 +160,10 @@ definitions:
         example: Entry deleted successfully
         type: string
     type: object
-  github_com_dict-simulator_go_internal_models.EntryResponse:
+  models.EntryResponse:
     properties:
       account:
-        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.Account'
+        $ref: '#/definitions/models.Account'
       createdAt:
         type: string
       key:
@@ -126,14 +173,14 @@ definitions:
         type: string
       keyType:
         allOf:
-        - $ref: '#/definitions/github_com_dict-simulator_go_internal_models.KeyType'
+        - $ref: '#/definitions/models.KeyType'
         example: PHONE
       owner:
-        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.Owner'
+        $ref: '#/definitions/models.Owner'
       updatedAt:
         type: string
     type: object
-  github_com_dict-simulator_go_internal_models.KeyType:
+  models.KeyType:
     enum:
     - CPF
     - CNPJ
@@ -147,7 +194,7 @@ definitions:
     - KeyTypeEMAIL
     - KeyTypePHONE
     - KeyTypeEVP
-  github_com_dict-simulator_go_internal_models.Owner:
+  models.Owner:
     properties:
       name:
         example: John Doe
@@ -170,7 +217,7 @@ definitions:
     - taxIdNumber
     - type
     type: object
-  github_com_dict-simulator_go_internal_models.UpdateAccount:
+  models.UpdateAccount:
     properties:
       accountNumber:
         type: string
@@ -187,15 +234,15 @@ definitions:
       participant:
         type: string
     type: object
-  github_com_dict-simulator_go_internal_models.UpdateEntryRequest:
+  models.UpdateEntryRequest:
     properties:
       account:
-        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.UpdateAccount'
+        $ref: '#/definitions/models.UpdateAccount'
       key:
         example: "+5511999999999"
         type: string
       owner:
-        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.UpdateOwner'
+        $ref: '#/definitions/models.UpdateOwner'
       reason:
         enum:
         - USER_REQUESTED
@@ -208,14 +255,14 @@ definitions:
     - key
     - reason
     type: object
-  github_com_dict-simulator_go_internal_models.UpdateOwner:
+  models.UpdateOwner:
     properties:
       name:
         type: string
       tradeName:
         type: string
     type: object
-  github_com_dict-simulator_go_internal_models.UserResponse:
+  models.UserResponse:
     properties:
       email:
         example: user@example.com
@@ -227,53 +274,7 @@ definitions:
         example: John Doe
         type: string
     type: object
-  internal_modules_auth.AuthResponse:
-    properties:
-      token:
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-      user:
-        $ref: '#/definitions/github_com_dict-simulator_go_internal_models.UserResponse'
-    type: object
-  internal_modules_auth.LoginRequest:
-    properties:
-      email:
-        example: user@example.com
-        type: string
-      password:
-        example: password123
-        type: string
-    required:
-    - email
-    - password
-    type: object
-  internal_modules_auth.RegisterRequest:
-    properties:
-      email:
-        example: user@example.com
-        type: string
-      name:
-        example: John Doe
-        type: string
-      password:
-        example: password123
-        minLength: 6
-        type: string
-    required:
-    - email
-    - name
-    - password
-    type: object
-  internal_modules_health.HealthResponse:
-    properties:
-      status:
-        example: ok
-        type: string
-      timestamp:
-        example: "2024-01-15T10:30:00Z"
-        type: string
-    type: object
-host: localhost:8080
+host: localhost:3000
 info:
   contact:
     email: support@dict-simulator.io
@@ -299,7 +300,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_modules_auth.LoginRequest'
+          $ref: '#/definitions/auth.LoginRequest'
       produces:
       - application/json
       responses:
@@ -307,23 +308,23 @@ paths:
           description: Login successful
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - $ref: '#/definitions/httputil.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_modules_auth.AuthResponse'
+                  $ref: '#/definitions/auth.AuthResponse'
               type: object
         "400":
           description: Invalid request body
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "401":
           description: Invalid credentials
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: User login
       tags:
       - auth
@@ -339,7 +340,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/internal_modules_auth.RegisterRequest'
+          $ref: '#/definitions/auth.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -347,23 +348,23 @@ paths:
           description: User registered successfully
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - $ref: '#/definitions/httputil.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_modules_auth.AuthResponse'
+                  $ref: '#/definitions/auth.AuthResponse'
               type: object
         "400":
           description: Invalid request body
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "409":
           description: User already exists
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       summary: Register a new user
       tags:
       - auth
@@ -384,7 +385,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_dict-simulator_go_internal_models.CreateEntryRequest'
+          $ref: '#/definitions/models.CreateEntryRequest'
       produces:
       - application/json
       responses:
@@ -392,31 +393,31 @@ paths:
           description: Entry created successfully
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - $ref: '#/definitions/httputil.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse'
+                  $ref: '#/definitions/models.EntryResponse'
               type: object
         "400":
           description: Invalid request body or key format
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "409":
           description: Key already exists
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "429":
           description: Rate limit exceeded
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       security:
       - BearerAuth: []
       summary: Create a new DICT entry
@@ -440,31 +441,31 @@ paths:
           description: Entry found
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - $ref: '#/definitions/httputil.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse'
+                  $ref: '#/definitions/models.EntryResponse'
               type: object
         "400":
           description: Key is required
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "404":
           description: Entry not found
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "429":
           description: Rate limit exceeded
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       security:
       - BearerAuth: []
       summary: Get a DICT entry by key
@@ -486,7 +487,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_dict-simulator_go_internal_models.UpdateEntryRequest'
+          $ref: '#/definitions/models.UpdateEntryRequest'
       produces:
       - application/json
       responses:
@@ -494,31 +495,31 @@ paths:
           description: Entry updated successfully
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - $ref: '#/definitions/httputil.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_dict-simulator_go_internal_models.EntryResponse'
+                  $ref: '#/definitions/models.EntryResponse'
               type: object
         "400":
           description: Invalid request body, key mismatch, or EVP key update attempt
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "404":
           description: Entry not found
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "429":
           description: Rate limit exceeded
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       security:
       - BearerAuth: []
       summary: Update a DICT entry
@@ -541,7 +542,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_dict-simulator_go_internal_models.DeleteEntryRequest'
+          $ref: '#/definitions/models.DeleteEntryRequest'
       produces:
       - application/json
       responses:
@@ -549,35 +550,35 @@ paths:
           description: Entry deleted successfully
           schema:
             allOf:
-            - $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            - $ref: '#/definitions/httputil.APIResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/github_com_dict-simulator_go_internal_models.DeleteEntryResponse'
+                  $ref: '#/definitions/models.DeleteEntryResponse'
               type: object
         "400":
           description: Invalid request body or key mismatch
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "403":
           description: Forbidden - participant mismatch
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "404":
           description: Entry not found
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "429":
           description: Rate limit exceeded
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_dict-simulator_go_internal_httputil.APIResponse'
+            $ref: '#/definitions/httputil.APIResponse'
       security:
       - BearerAuth: []
       summary: Delete a DICT entry
@@ -592,7 +593,7 @@ paths:
         "200":
           description: Service is healthy
           schema:
-            $ref: '#/definitions/internal_modules_health.HealthResponse'
+            $ref: '#/definitions/health.HealthResponse'
       summary: Health check
       tags:
       - health

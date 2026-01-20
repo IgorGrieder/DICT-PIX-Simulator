@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/dict-simulator/go/internal/constants"
 	"github.com/dict-simulator/go/internal/httputil"
 	"github.com/dict-simulator/go/internal/models"
@@ -40,14 +44,29 @@ func NewHandler(repo *models.EntryRepository) *Handler {
 //	@Security		BearerAuth
 //	@Router			/entries [post]
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	span := trace.SpanFromContext(ctx)
+
 	var req models.CreateEntryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody)
+		span.SetStatus(codes.Error, "JSON decode failed")
+		span.SetAttributes(
+			attribute.String("error.type", "json_decode"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
+		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage("JSON decode error: "+err.Error()))
 		return
 	}
 
 	// Validate request using validator library
 	if err := validation.Validate(&req); err != nil {
+		span.SetStatus(codes.Error, "Validation failed")
+		span.SetAttributes(
+			attribute.String("error.type", "validation"),
+			attribute.String("error.message", err.Error()),
+		)
+		span.RecordError(err)
 		httputil.WriteAPIError(w, r, constants.ErrInvalidRequestBody.WithMessage(err.Error()))
 		return
 	}
@@ -55,6 +74,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	// Validate key format based on key type
 	validationResult := ValidateKey(req.Key, req.KeyType)
 	if !validationResult.Success {
+		span.SetStatus(codes.Error, "Key validation failed")
+		span.SetAttributes(
+			attribute.String("error.type", "key_validation"),
+			attribute.String("error.message", validationResult.Error.Message),
+		)
 		httputil.WriteAPIError(w, r, constants.APIError{
 			Code:    validationResult.Error.Type,
 			Message: validationResult.Error.Message,
@@ -62,8 +86,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
-	ctx := r.Context()
 
 	// Check if key already exists
 	existing, err := h.repo.FindByKey(ctx, req.Key)

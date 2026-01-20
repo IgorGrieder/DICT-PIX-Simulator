@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"go.opentelemetry.io/contrib/bridges/otelzap"
 	otellog "go.opentelemetry.io/otel/log"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -10,9 +9,8 @@ import (
 // Log is the global logger instance
 var Log *zap.Logger
 
-// Init initializes the Zap logger with JSON output and optional OTEL integration
-// If logProvider is not nil, logs will be exported to OpenTelemetry as well as stdout
-func Init(env string, logProvider otellog.LoggerProvider) error {
+// Init initializes the Zap logger with JSON output
+func Init(env string, _ otellog.LoggerProvider) error {
 	config := zap.Config{
 		Level:       zap.NewAtomicLevelAt(zap.InfoLevel),
 		Development: env == "development",
@@ -35,23 +33,11 @@ func Init(env string, logProvider otellog.LoggerProvider) error {
 		ErrorOutputPaths: []string{"stderr"},
 	}
 
-	// Build the base logger for stdout
-	stdoutLogger, err := config.Build()
+	var err error
+	Log, err = config.Build()
 	if err != nil {
 		return err
 	}
-
-	stdoutCore := stdoutLogger.Core()
-
-	// Create otelzap core for OTEL export
-	otelCore := otelzap.NewCore("dict-simulator",
-		otelzap.WithLoggerProvider(logProvider),
-		otelzap.WithVersion("1.0.0"),
-	)
-
-	// Combine both cores: logs go to stdout AND OTEL
-	combinedCore := zapcore.NewTee(stdoutCore, otelCore)
-	Log = zap.New(combinedCore, zap.AddCaller())
 
 	zap.ReplaceGlobals(Log)
 	return nil

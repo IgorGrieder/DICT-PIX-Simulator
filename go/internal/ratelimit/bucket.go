@@ -10,6 +10,53 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// Lua scripts for atomic operations - defined at package level for SHA caching
+var (
+	// getTokensScript handles token bucket with refill logic
+	getTokensScript = redis.NewScript(`
+		local tokens_key = KEYS[1]
+		local last_refill_key = KEYS[2]
+		local bucket_size = tonumber(ARGV[1])
+		local refill_rate = tonumber(ARGV[2])
+		local now = tonumber(ARGV[3])
+
+		-- Get current values
+		local tokens = tonumber(redis.call('GET', tokens_key) or bucket_size)
+		local last_refill = tonumber(redis.call('GET', last_refill_key) or now)
+
+		-- Calculate refill
+		local elapsed_minutes = (now - last_refill) / 60
+		local refill_amount = math.floor(elapsed_minutes * refill_rate)
+		
+		if refill_amount > 0 then
+			tokens = math.min(bucket_size, tokens + refill_amount)
+			redis.call('SET', tokens_key, tokens)
+			redis.call('SET', last_refill_key, now)
+		end
+
+		-- Set TTL to prevent stale keys (2x refill period)
+		local ttl = 120
+		redis.call('EXPIRE', tokens_key, ttl)
+		redis.call('EXPIRE', last_refill_key, ttl)
+
+		return tokens
+	`)
+
+	// deductTokensScript handles atomic token deduction
+	deductTokensScript = redis.NewScript(`
+		local tokens_key = KEYS[1]
+		local cost = tonumber(ARGV[1])
+		local bucket_size = tonumber(ARGV[2])
+
+		local tokens = tonumber(redis.call('GET', tokens_key) or bucket_size)
+		tokens = math.max(0, tokens - cost)
+		redis.call('SET', tokens_key, tokens)
+		redis.call('EXPIRE', tokens_key, 120)
+
+		return tokens
+	`)
+)
+
 // Bucket implements a token bucket rate limiter using Redis
 type Bucket struct {
 	client *redis.Client
@@ -79,39 +126,8 @@ func (b *Bucket) getTokensWithRefill(ctx context.Context, policy Policy, identif
 	tokensKey := b.tokensKey(policy.Name, identifier)
 	lastRefillKey := b.lastRefillKey(policy.Name, identifier)
 
-	// Lua script for atomic token bucket with refill
-	// This ensures thread-safety across multiple instances
-	script := redis.NewScript(`
-		local tokens_key = KEYS[1]
-		local last_refill_key = KEYS[2]
-		local bucket_size = tonumber(ARGV[1])
-		local refill_rate = tonumber(ARGV[2])
-		local now = tonumber(ARGV[3])
-
-		-- Get current values
-		local tokens = tonumber(redis.call('GET', tokens_key) or bucket_size)
-		local last_refill = tonumber(redis.call('GET', last_refill_key) or now)
-
-		-- Calculate refill
-		local elapsed_minutes = (now - last_refill) / 60
-		local refill_amount = math.floor(elapsed_minutes * refill_rate)
-		
-		if refill_amount > 0 then
-			tokens = math.min(bucket_size, tokens + refill_amount)
-			redis.call('SET', tokens_key, tokens)
-			redis.call('SET', last_refill_key, now)
-		end
-
-		-- Set TTL to prevent stale keys (2x refill period)
-		local ttl = 120
-		redis.call('EXPIRE', tokens_key, ttl)
-		redis.call('EXPIRE', last_refill_key, ttl)
-
-		return tokens
-	`)
-
 	now := time.Now().Unix()
-	result, err := script.Run(ctx, b.client, []string{tokensKey, lastRefillKey},
+	result, err := getTokensScript.Run(ctx, b.client, []string{tokensKey, lastRefillKey},
 		policy.BucketSize, policy.RefillRate, now).Int()
 
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -125,21 +141,7 @@ func (b *Bucket) getTokensWithRefill(ctx context.Context, policy Policy, identif
 func (b *Bucket) deduct(ctx context.Context, policy Policy, identifier string, cost int) error {
 	tokensKey := b.tokensKey(policy.Name, identifier)
 
-	// Lua script for atomic deduction
-	script := redis.NewScript(`
-		local tokens_key = KEYS[1]
-		local cost = tonumber(ARGV[1])
-		local bucket_size = tonumber(ARGV[2])
-
-		local tokens = tonumber(redis.call('GET', tokens_key) or bucket_size)
-		tokens = math.max(0, tokens - cost)
-		redis.call('SET', tokens_key, tokens)
-		redis.call('EXPIRE', tokens_key, 120)
-
-		return tokens
-	`)
-
-	_, err := script.Run(ctx, b.client, []string{tokensKey}, cost, policy.BucketSize).Int()
+	_, err := deductTokensScript.Run(ctx, b.client, []string{tokensKey}, cost, policy.BucketSize).Int()
 	return err
 }
 

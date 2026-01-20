@@ -14,7 +14,7 @@
 //	@license.name				MIT
 //	@license.url				https://opensource.org/licenses/MIT
 //
-//	@host						localhost:8080
+//	@host						localhost:3000
 //	@BasePath					/
 //	@schemes					http https
 //
@@ -84,7 +84,7 @@ func main() {
 	srv.ListenAndServeWithGracefulShutdown()
 }
 
-// setupTelemetry initializes OpenTelemetry tracing and logging providers.
+// setupTelemetry initializes OpenTelemetry tracing provider.
 // Returns a cleanup function that should be deferred.
 func setupTelemetry() func() {
 	shutdownTracing, err := telemetry.InitTracer(config.Env.OTELExporterEndpoint)
@@ -92,19 +92,13 @@ func setupTelemetry() func() {
 		logger.Fatal("Failed to initialize tracer", zap.Error(err))
 	}
 
-	shutdownLogging, err := telemetry.InitLoggerProvider(config.Env.OTELExporterEndpoint)
-	if err != nil {
-		logger.Fatal("Failed to initialize log provider", zap.Error(err))
-	}
-
-	if err := logger.Init(config.Env.Environment, telemetry.LoggerProvider); err != nil {
+	if err := logger.Init(config.Env.Environment, nil); err != nil {
 		panic("failed to initialize logger: " + err.Error())
 	}
 
 	return func() {
 		ctx := context.Background()
 		shutdownTracing(ctx)
-		shutdownLogging(ctx)
 		logger.Sync()
 	}
 }
