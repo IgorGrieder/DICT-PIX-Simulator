@@ -353,7 +353,7 @@ Applied to `POST /entries` (entry creation).
 | `GO_ENV`                      | No       | development                     | Environment name              |
 | `MONGODB_URI`                 | No       | mongodb://localhost:27017/dict  | MongoDB connection string     |
 | `REDIS_URI`                   | No       | redis://localhost:6379          | Redis connection string       |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | No       | http://localhost:4318/v1/traces | OTEL collector endpoint       |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | No       | http://localhost:4318/v1/traces | OTEL Traces collector endpoint       |
 | `RATE_LIMIT_ENABLED`          | No       | true                            | Enable/disable rate limiting  |
 
 ---

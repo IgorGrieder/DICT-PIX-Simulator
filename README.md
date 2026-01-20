@@ -337,7 +337,7 @@ sequenceDiagram
 | MONGODB_URI                 | mongodb://localhost:27017/dict  | MongoDB connection string    |
 | REDIS_URI                   | redis://localhost:6379          | Redis connection string      |
 | JWT_SECRET                  | (required)                      | Secret key for JWT signing   |
-| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4318/v1/traces | OpenTelemetry endpoint       |
+| OTEL_EXPORTER_OTLP_ENDPOINT | http://localhost:4318/v1/traces | OpenTelemetry Traces endpoint       |
 | RATE_LIMIT_BUCKET_SIZE      | 60                              | Max requests per window      |
 | RATE_LIMIT_REFILL_SECONDS   | 60                              | Rate limit window in seconds |
 
